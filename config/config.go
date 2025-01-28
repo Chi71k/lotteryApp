@@ -7,11 +7,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// DB — глобальная переменная для доступа к БД
 var DB *sql.DB
 
 func InitDB() {
-	// Пример DSN для PostgreSQL:
 	dsn := "postgres://postgres:1234@localhost:5432/lottery?sslmode=disable"
 
 	db, err := sql.Open("postgres", dsn)
@@ -28,7 +26,6 @@ func InitDB() {
 }
 
 func createTables() {
-	// Создаем таблицы, если они не существуют
 	userTable := `
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
