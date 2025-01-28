@@ -1,0 +1,172 @@
+
+body {
+    font-family: Arial, sans-serif;
+    background: url('/static/lottery.png') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.navbar {
+    display: flex;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.navbar a {
+    color: #fff;
+    text-decoration: none;
+    margin: 0 15px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.navbar a:hover {
+    background-color: #444;
+    color: #fff;
+}
+
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    transform: translateY(50px);
+}
+
+h1, h2 {
+    margin: 10px 0;
+    font-weight: bold;
+}
+
+
+form input, form button {
+    display: block;
+    width: 50%;
+    padding: 10px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    width: 60%;
+}
+
+form button {
+    background: #28a745;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+form button:hover {
+    background: #218838;
+}
+
+
+.lotteries {
+    margin: 20px 0;
+}
+
+.lottery {
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    text-align: left;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.lottery h2 {
+    margin: 0 0 10px;
+    color: #fff;
+}
+
+.lottery p {
+    margin: 5px 0;
+}
+
+.lottery form {
+    text-align: center;
+}
+
+
+.container a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s;
+}
+
+.container a:hover {
+    color: #0056b3;
+}
+
+
+
+.login-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+
+.login-container h1 {
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: #fff;
+}
+
+
+.login-container input {
+    width: 93%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+
+.login-container button {
+    width: 100%;
+    padding: 12px;
+    background: #28a745;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.login-container button:hover {
+    background: #218838;
+}
+
