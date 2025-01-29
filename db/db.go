@@ -11,7 +11,7 @@ var DB *sql.DB
 
 const (
 	dbAdminConnection = "user=loto_user password=1234 dbname=postgres sslmode=disable"
-	dbConnection      = "user=loto_user password=1234 dbname=goproject sslmode=disable"
+	dbConnection      = "user=loto_user password=1234 dbname=postgres sslmode=disable"
 )
 
 func Init() {
