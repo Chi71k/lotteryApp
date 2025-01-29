@@ -1,0 +1,10 @@
+<!-- templates/navbar.html -->
+<div class="nav">
+    {{ if .LoggedIn }}
+        <a href="/lotteries">Buy Tickets</a>
+        <a href="/logout">Logout</a>
+    {{ else }}
+        <a href="/register">Register</a>
+        <a href="/login">Login</a>
+    {{ end }}
+</div>
