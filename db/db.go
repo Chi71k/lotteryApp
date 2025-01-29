@@ -4,10 +4,9 @@ import (
 	"database/sql"
 	"log"
 
-	_ "github.com/lib/pq" // драйвер PostgreSQL
+	_ "github.com/lib/pq" 
 )
 
-// Глобальная переменная с подключением к базе
 var DB *sql.DB
 
 const (
@@ -15,27 +14,22 @@ const (
 	dbConnection      = "user=loto_user password=1234 dbname=goproject sslmode=disable"
 )
 
-// Инициализация базы (вызывается из main)
 func Init() {
-	// Подключаемся к admin-базе (postgres), чтобы проверить/создать нужную базу goproject
 	adminDB, err := sql.Open("postgres", dbAdminConnection)
 	if err != nil {
 		log.Fatalf("Failed to connect to admin database: %v", err)
 	}
 	defer adminDB.Close()
 
-	// Создадим базу goproject, если её нет
 	if err := createDatabaseIfNotExists(adminDB, "goproject"); err != nil {
 		log.Printf("Warning: %v", err)
 	}
 
-	// Теперь подключаемся к goproject
 	DB, err = sql.Open("postgres", dbConnection)
 	if err != nil {
 		log.Fatalf("Failed to connect to target database: %v", err)
 	}
 
-	// Проверяем соединение
 	if err = DB.Ping(); err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
@@ -61,7 +55,6 @@ func createDatabaseIfNotExists(adminDB *sql.DB, dbName string) error {
 	return nil
 }
 
-// Создание таблиц, добавление примеров
 func InitializeSchema() error {
 	schema := `
 	CREATE TABLE IF NOT EXISTS users (
@@ -89,7 +82,6 @@ func InitializeSchema() error {
 		return err
 	}
 
-	// Проверим, есть ли лотереи
 	checkQuery := "SELECT COUNT(*) FROM lotteries"
 	var count int
 	err = DB.QueryRow(checkQuery).Scan(&count)
@@ -97,7 +89,6 @@ func InitializeSchema() error {
 		return err
 	}
 
-	// Если нет, добавим несколько
 	if count == 0 {
 		log.Println("Adding sample lotteries...")
 		insertQuery := `
