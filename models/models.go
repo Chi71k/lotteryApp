@@ -2,7 +2,6 @@ package models
 
 import "time"
 
-// Структура пользователя
 type User struct {
     ID       int
     Username string
@@ -10,7 +9,6 @@ type User struct {
     Code     string
 }
 
-// Структура лотереи
 type Lottery struct {
     ID          int
     Name        string
