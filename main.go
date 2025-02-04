@@ -9,19 +9,20 @@ import (
 )
 
 func main() {
-	// Инициализация БД
 	db.Init()
 	defer db.DB.Close()
 
-	// Создание таблиц и примерных записей
 	if err := db.InitializeSchema(); err != nil {
 		log.Fatalf("Failed to initialize schema: %v", err)
 	}
 
-	// Раздача статических файлов (CSS, JS)
+	err := db.DrawWinners(1)
+	if err != nil {
+		log.Printf("Error drawing winners: %v", err)
+	}
+
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	// Маршруты
 	http.HandleFunc("/", handlers.HomeHandler)
 	http.HandleFunc("/register", handlers.RegisterHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
