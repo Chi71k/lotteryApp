@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Draw</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <a href="/home">Home</a>
+        <a href="/draws">Draws</a>
+        <a href="/logout">Logout</a>
+    </div>
+    <div class="container">
+        <h1>Create a New Draw</h1>
+        <form method="post">
+            <label for="lottery_id">Lottery:</label>
+            <select name="lottery_id" id="lottery_id">
+                {{range .}}
+                    <option value="{{.ID}}">{{.Name}}</option>
+                {{end}}
+            </select>
+
+            <label for="draw_date">Draw Date:</label>
+            <input type="datetime-local" name="draw_date" id="draw_date" required>
+
+            <label for="winner">Winner:</label>
+            <input type="text" name="winner" id="winner" required>
+
+            <label for="prize_amount">Prize Amount:</label>
+            <input type="number" step="0.01" name="prize_amount" id="prize_amount" required>
+
+            <button type="submit">Create Draw</button>
+        </form>
+    </div>
+</body>
+</html>

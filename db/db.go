@@ -4,14 +4,14 @@ import (
 	"database/sql"
 	"log"
 
-	_ "github.com/lib/pq" 
+	_ "github.com/lib/pq"
 )
 
 var DB *sql.DB
 
 const (
-	dbAdminConnection = "user=loto_user password=1234 dbname=postgres sslmode=disable"
-	dbConnection      = "user=loto_user password=1234 dbname=goproject sslmode=disable"
+	dbAdminConnection = "user=postgres password=Eroha100! dbname=postgres sslmode=disable"
+	dbConnection      = "user=postgres password=Eroha100! dbname=goproject sslmode=disable"
 )
 
 func Init() {
@@ -74,7 +74,22 @@ func InitializeSchema() error {
 	CREATE TABLE IF NOT EXISTS purchases (
 		id SERIAL PRIMARY KEY,
 		username VARCHAR(50),
-		lottery_id INT REFERENCES lotteries(id)
+		lottery_id INT REFERENCES lotteries(id),
+		is_winner BOOLEAN DEFAULT FALSE
+	);
+
+	CREATE TABLE IF NOT EXISTS winning_tickets (
+		id SERIAL PRIMARY KEY,
+		purchase_id INT REFERENCES purchases(id),
+		winning_amount NUMERIC NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS draws (
+		id SERIAL PRIMARY KEY,
+		lottery_id INT REFERENCES lotteries(id),
+		draw_date TIMESTAMP NOT NULL,
+		winner VARCHAR(100),
+		prize_amount NUMERIC
 	);
 	`
 	_, err := DB.Exec(schema)
@@ -102,6 +117,49 @@ func InitializeSchema() error {
 			return err
 		}
 		log.Println("Sample lotteries added.")
+	}
+	return nil
+}
+
+func GetWinningTickets() ([]int, error) {
+	query := `SELECT id FROM purchases WHERE is_winner = TRUE`
+	rows, err := DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var winningIDs []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		winningIDs = append(winningIDs, id)
+	}
+	return winningIDs, nil
+}
+
+// Функция для проведения розыгрыша
+func DrawWinners(lotteryID int) error {
+	query := `UPDATE purchases SET is_winner = TRUE WHERE lottery_id = $1 AND random() < 0.1 RETURNING id`
+	rows, err := DB.Query(query, lotteryID)
+	if err != nil {
+		log.Printf("Error selecting winners: %v", err)
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var purchaseID int
+		if err := rows.Scan(&purchaseID); err != nil {
+			log.Printf("Error scanning winner ID: %v", err)
+			return err
+		}
+		_, err = DB.Exec("INSERT INTO winning_tickets (purchase_id, winning_amount) VALUES ($1, 500)", purchaseID)
+		if err != nil {
+			log.Printf("Error inserting winning ticket: %v", err)
+			return err
+		}
+		log.Printf("Winner added: Purchase ID %d", purchaseID)
 	}
 	return nil
 }

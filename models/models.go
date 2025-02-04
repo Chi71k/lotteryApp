@@ -4,17 +4,26 @@ import "time"
 
 // Структура пользователя
 type User struct {
-    ID       int
-    Username string
-    Password string
-    Code     string
+	ID       int
+	Username string
+	Password string
+	Code     string
 }
 
 // Структура лотереи
 type Lottery struct {
-    ID          int
-    Name        string
-    Description string
-    Price       float64
-    EndDate     time.Time
+	ID          int
+	Name        string
+	Description string
+	Price       float64
+	EndDate     time.Time
+}
+
+// Структура розыгрыша
+type Draw struct {
+	ID          int
+	LotteryID   int
+	DrawDate    time.Time
+	Winner      string
+	PrizeAmount float64
 }
