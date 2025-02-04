@@ -34,6 +34,11 @@ func Init() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 	log.Println("Connected to database 'goproject'")
+
+	// Вызываем инициализацию схемы после успешного подключения
+	if err := InitializeSchema(); err != nil {
+		log.Fatalf("Failed to initialize database schema: %v", err)
+	}
 }
 
 func createDatabaseIfNotExists(adminDB *sql.DB, dbName string) error {
