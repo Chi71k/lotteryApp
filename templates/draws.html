@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draws</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <a href="/lotteries">Buy Tickets</a>
+        <a href="/draws">Draws</a>
+        <a href="/logout">Logout</a>
+    </div>
+    <div class="container">
+        <h1>Draws</h1>
+
+        <!-- Show the Create New Draw link only for admin -->
+        {{if eq .Username "admin"}}
+        <a href="/draws/create">Create New Draw</a>
+        {{end}}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Lottery</th>
+                    <th>Draw Date</th>
+                    <th>Winner</th>
+                    <th>Prize Amount</th>
+                    {{if eq $.Username "admin"}}
+                    <th>Actions</th>
+                    {{end}}
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Draws}}
+                    <tr>
+                        <td>{{.ID}}</td>
+                        <td>{{.LotteryID}}</td>
+                        <td>{{.DrawDate}}</td>
+                        <td>{{.Winner}}</td>
+                        <td>{{.PrizeAmount}}</td>
+                        <td>
+                            <!-- Show Edit and Delete buttons only for admin -->
+                            {{if eq $.Username "admin"}}
+                            <a href="/draws/update?id={{.ID}}">Edit</a>
+                            <a href="/draws/delete?id={{.ID}}">Delete</a>
+                            {{end}}
+                        </td>
+                    </tr>
+                {{else}}
+                    <tr>
+                        <td colspan="6">No draws available</td>
+                    </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

@@ -88,6 +88,14 @@ func InitializeSchema() error {
 		purchase_id INT REFERENCES purchases(id),
 		winning_amount NUMERIC NOT NULL
 	);
+
+	CREATE TABLE IF NOT EXISTS draws (
+		id SERIAL PRIMARY KEY,
+		lottery_id INT REFERENCES lotteries(id),
+		draw_date TIMESTAMP NOT NULL,
+		winner VARCHAR(100),
+		prize_amount NUMERIC
+	);
 	`
 	_, err := DB.Exec(schema)
 	if err != nil {
@@ -118,7 +126,6 @@ func InitializeSchema() error {
 	return nil
 }
 
-// Функция для получения списка выигрышных билетов
 func GetWinningTickets() ([]int, error) {
 	query := `SELECT id FROM purchases WHERE is_winner = TRUE`
 	rows, err := DB.Query(query)
@@ -126,7 +133,6 @@ func GetWinningTickets() ([]int, error) {
 		return nil, err
 	}
 	defer rows.Close()
-
 	var winningIDs []int
 	for rows.Next() {
 		var id int
@@ -138,29 +144,97 @@ func GetWinningTickets() ([]int, error) {
 	return winningIDs, nil
 }
 
-// Функция для проведения розыгрыша
+func PurchaseTicket(username string, lotteryID int) error {
+	tx, err := DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		return err
+	}
+
+	query := `INSERT INTO purchases (username, lottery_id) VALUES ($1, $2) RETURNING id`
+	var purchaseID int
+	err = tx.QueryRow(query, username, lotteryID).Scan(&purchaseID)
+	if err != nil {
+		log.Printf("Error inserting purchase: %v", err)
+		tx.Rollback()
+		return err
+	}
+	log.Printf("Ticket purchased: Purchase ID %d", purchaseID)
+
+	randQuery := `UPDATE purchases SET is_winner = TRUE WHERE id = $1 AND random() < 0.6 RETURNING id`
+	var winnerID int
+	err = tx.QueryRow(randQuery, purchaseID).Scan(&winnerID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Println("No winner this time.")
+		} else {
+			log.Printf("Error marking winner: %v", err)
+			tx.Rollback()
+			return err
+		}
+	} else {
+		_, err = tx.Exec("INSERT INTO winning_tickets (purchase_id, winning_amount) VALUES ($1, 500)", winnerID)
+		if err != nil {
+			log.Printf("Error inserting winning ticket: %v", err)
+			tx.Rollback()
+			return err
+		}
+		log.Printf("Winner immediately added: Purchase ID %d", winnerID)
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 func DrawWinners(lotteryID int) error {
-	query := `UPDATE purchases SET is_winner = TRUE WHERE lottery_id = $1 AND random() < 0.1 RETURNING id`
-	rows, err := DB.Query(query, lotteryID)
+	tx, err := DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		return err
+	}
+
+	query := `UPDATE purchases SET is_winner = TRUE WHERE lottery_id = $1 AND is_winner = FALSE AND random() < 0.6 RETURNING id`
+	rows, err := tx.Query(query, lotteryID)
 	if err != nil {
 		log.Printf("Error selecting winners: %v", err)
+		tx.Rollback()
 		return err
 	}
 	defer rows.Close()
 
+	var purchaseIDs []int
 	for rows.Next() {
 		var purchaseID int
 		if err := rows.Scan(&purchaseID); err != nil {
 			log.Printf("Error scanning winner ID: %v", err)
+			tx.Rollback()
 			return err
 		}
-
-		_, err = DB.Exec("INSERT INTO winning_tickets (purchase_id, winning_amount) VALUES ($1, 500)", purchaseID)
-		if err != nil {
-			log.Printf("Error inserting winning ticket: %v", err)
-			return err
-		}
-		log.Printf("Winner added: Purchase ID %d", purchaseID)
+		purchaseIDs = append(purchaseIDs, purchaseID)
 	}
+
+	if len(purchaseIDs) > 0 {
+		for _, purchaseID := range purchaseIDs {
+			_, err = tx.Exec("INSERT INTO winning_tickets (purchase_id, winning_amount) VALUES ($1, 500)", purchaseID)
+			if err != nil {
+				log.Printf("Error inserting winning ticket: %v", err)
+				tx.Rollback()
+				return err
+			}
+			log.Printf("Winner added: Purchase ID %d", purchaseID)
+		}
+	} else {
+		log.Println("No winners in this draw.")
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		return err
+	}
+
 	return nil
 }

@@ -3,12 +3,11 @@ package handlers
 import (
 	"html/template"
 	"log"
+	"loto/db"
+	"loto/models"
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
-
-	"loto/db"
-	"loto/models"
 )
 
 type LoginData struct {
@@ -34,6 +33,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		_, err = db.DB.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, string(hashedPassword))
 		_, err = db.DB.Exec("INSERT INTO users (username, password) VALUES ($1, $2)",
 			username, string(hashedPassword))
 		if err != nil {
@@ -89,6 +89,15 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Value:  "",
 		Path:   "/",
 		MaxAge: -1,
+		MaxAge: -1,
 	})
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func isAdmin(r *http.Request) bool {
+	cookie, err := r.Cookie("username")
+	if err != nil || cookie.Value != "admin" {
+		return false
+	}
+	return true
 }
