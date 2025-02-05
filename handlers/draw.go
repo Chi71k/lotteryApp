@@ -9,16 +9,13 @@ import (
 	"time"
 )
 
-// DrawsHandler - Fetches and displays all draws, only accessible by logged-in users
 func DrawsHandler(w http.ResponseWriter, r *http.Request) {
-	// Check if the user is logged in
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
-	// Fetch draws from the database
 	rows, err := db.DB.Query("SELECT id, lottery_id, draw_date, winner, prize_amount FROM draws")
 	if err != nil {
 		http.Error(w, "Unable to retrieve draws", http.StatusInternalServerError)
@@ -36,14 +33,12 @@ func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 		draws = append(draws, draw)
 	}
 
-	// Pass the logged-in user's username and the draws to the template
 	tmpl.ExecuteTemplate(w, "draws.html", map[string]interface{}{
 		"Draws":    draws,
-		"Username": cookie.Value, // Pass the username to the template
+		"Username": cookie.Value,
 	})
 }
 
-// Displays form for creating a new draw (only for admins)
 func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -56,14 +51,12 @@ func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 		winner := r.FormValue("winner")
 		prizeAmountStr := r.FormValue("prize_amount")
 
-		// Parse form data with yyyy-mm-ddTHH:mm format (e.g., 2025-02-04T14:30)
 		drawDate, err := time.Parse("2006-01-02T15:04", drawDateStr)
 		if err != nil {
 			http.Error(w, "Invalid draw date", http.StatusBadRequest)
 			return
 		}
 
-		// Set the time part to midnight (00:00:00) if necessary
 		drawDate = time.Date(drawDate.Year(), drawDate.Month(), drawDate.Day(), 0, 0, 0, 0, time.UTC)
 
 		prizeAmount, err := strconv.ParseFloat(prizeAmountStr, 64)
@@ -72,7 +65,6 @@ func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Insert the new draw into the database
 		_, err = db.DB.Exec("INSERT INTO draws (lottery_id, draw_date, winner, prize_amount) VALUES ($1, $2, $3, $4)",
 			lotteryID, drawDate, winner, prizeAmount)
 		if err != nil {
@@ -81,12 +73,10 @@ func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Redirect back to the draws list
 		http.Redirect(w, r, "/draws", http.StatusSeeOther)
 		return
 	}
 
-	// Fetch all lotteries to show in the form
 	rows, err := db.DB.Query("SELECT id, name FROM lotteries")
 	if err != nil {
 		http.Error(w, "Unable to fetch lotteries", http.StatusInternalServerError)
@@ -104,11 +94,9 @@ func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 		lotteries = append(lotteries, lottery)
 	}
 
-	// Render the create draw form with the lotteries data
 	tmpl.ExecuteTemplate(w, "create_draw.html", lotteries)
 }
 
-// Update a specific draw (only for admins)
 func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -121,19 +109,16 @@ func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 		winner := r.FormValue("winner")
 		prizeAmountStr := r.FormValue("prize_amount")
 
-		// Log incoming form values to debug
 		log.Printf("Received update form data: draw_id=%s, draw_date=%s, winner=%s, prize_amount=%s",
 			drawID, drawDateStr, winner, prizeAmountStr)
 
-		// Parse form data with yyyy-mm-ddTHH:mm format (e.g., 2025-02-04T14:30)
 		drawDate, err := time.Parse("2006-01-02T15:04", drawDateStr)
 		if err != nil {
-			log.Println("Error parsing draw date:", err) // Log the error
+			log.Println("Error parsing draw date:", err)
 			http.Error(w, "Invalid draw date", http.StatusBadRequest)
 			return
 		}
 
-		// Set the time part to midnight (00:00:00) if necessary
 		drawDate = time.Date(drawDate.Year(), drawDate.Month(), drawDate.Day(), 0, 0, 0, 0, time.UTC)
 
 		prizeAmount, err := strconv.ParseFloat(prizeAmountStr, 64)
@@ -142,7 +127,6 @@ func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Update the draw in the database
 		_, err = db.DB.Exec("UPDATE draws SET draw_date = $1, winner = $2, prize_amount = $3 WHERE id = $4",
 			drawDate, winner, prizeAmount, drawID)
 		if err != nil {
@@ -151,12 +135,10 @@ func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Redirect back to the draws list
 		http.Redirect(w, r, "/draws", http.StatusSeeOther)
 		return
 	}
 
-	// Fetch the draw ID from the URL
 	drawID := r.URL.Query().Get("id")
 	if drawID == "" {
 		http.Error(w, "Invalid draw ID", http.StatusBadRequest)
@@ -170,11 +152,9 @@ func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Render the update draw form with the existing values
 	tmpl.ExecuteTemplate(w, "update_draw.html", draw)
 }
 
-// Delete a specific draw (only for admins)
 func DeleteDrawHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -190,6 +170,5 @@ func DeleteDrawHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect back to the draws list
 	http.Redirect(w, r, "/draws", http.StatusSeeOther)
 }
