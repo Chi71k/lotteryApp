@@ -8,14 +8,11 @@ import (
 	"loto/models"
 )
 
-// var session = make(map[string]string)
 
 func authenticateUser(username, password string) bool {
-	// Dummy authentication logic for example purposes
 	return username == "admin" && password == "password"
 }
 
-// Список лотерей
 func LotteriesHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
@@ -57,13 +54,16 @@ func LotteriesHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "lotteries.html", lotteries)
 }
 
-// Покупка лотереи
 func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if session["user"] == "" {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
+	c, err := r.Cookie("username")
+	if err != nil || c.Value == "" {
+	}
+	
 	if r.Method == http.MethodPost {
 		lotteryID := r.FormValue("lottery_id")
 		user := session["user"]
@@ -80,6 +80,5 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Если GET — отправить обратно к списку лотерей
 	http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 }
