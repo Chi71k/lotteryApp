@@ -89,7 +89,6 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		Value:  "",
 		Path:   "/",
 		MaxAge: -1,
-		MaxAge: -1,
 	})
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
