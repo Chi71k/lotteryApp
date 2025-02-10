@@ -1,3 +1,4 @@
+// draw.go
 package handlers
 
 import (
@@ -9,7 +10,9 @@ import (
 	"time"
 )
 
+// DrawsHandler отображает список розыгрышей.
 func DrawsHandler(w http.ResponseWriter, r *http.Request) {
+	// Проверяем, что пользователь аутентифицирован.
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -39,6 +42,7 @@ func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// CreateDrawHandler позволяет создать новый розыгрыш.
 func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -57,6 +61,7 @@ func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Приводим дату к началу дня.
 		drawDate = time.Date(drawDate.Year(), drawDate.Month(), drawDate.Day(), 0, 0, 0, 0, time.UTC)
 
 		prizeAmount, err := strconv.ParseFloat(prizeAmountStr, 64)
@@ -77,6 +82,7 @@ func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Для отображения формы получаем список лотерей.
 	rows, err := db.DB.Query("SELECT id, name FROM lotteries")
 	if err != nil {
 		http.Error(w, "Unable to fetch lotteries", http.StatusInternalServerError)
@@ -97,6 +103,7 @@ func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "create_draw.html", lotteries)
 }
 
+// UpdateDrawHandler позволяет обновить данные розыгрыша.
 func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -114,11 +121,9 @@ func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 
 		drawDate, err := time.Parse("2006-01-02T15:04", drawDateStr)
 		if err != nil {
-			log.Println("Error parsing draw date:", err)
 			http.Error(w, "Invalid draw date", http.StatusBadRequest)
 			return
 		}
-
 		drawDate = time.Date(drawDate.Year(), drawDate.Month(), drawDate.Day(), 0, 0, 0, 0, time.UTC)
 
 		prizeAmount, err := strconv.ParseFloat(prizeAmountStr, 64)
@@ -130,7 +135,6 @@ func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 		_, err = db.DB.Exec("UPDATE draws SET draw_date = $1, winner = $2, prize_amount = $3 WHERE id = $4",
 			drawDate, winner, prizeAmount, drawID)
 		if err != nil {
-			log.Println("Error updating draw:", err)
 			http.Error(w, "Unable to update draw", http.StatusInternalServerError)
 			return
 		}
@@ -155,6 +159,7 @@ func UpdateDrawHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "update_draw.html", draw)
 }
 
+// DeleteDrawHandler удаляет розыгрыш.
 func DeleteDrawHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -162,10 +167,8 @@ func DeleteDrawHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	drawID := r.URL.Query().Get("id")
-
 	_, err := db.DB.Exec("DELETE FROM draws WHERE id = $1", drawID)
 	if err != nil {
-		log.Println("Error deleting draw:", err)
 		http.Error(w, "Unable to delete draw", http.StatusInternalServerError)
 		return
 	}

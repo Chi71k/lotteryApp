@@ -1,7 +1,8 @@
+// lottery.go
 package handlers
 
 import (
-	"log"
+	"html/template"
 	"loto/db"
 	"loto/models"
 	"net/http"
@@ -9,6 +10,9 @@ import (
 	"time"
 )
 
+var lotteryTmpl = template.Must(template.ParseGlob("templates/*.html"))
+
+// authenticateUser проверяет, что пользователь аутентифицирован (наличие cookie "username").
 func authenticateUser(r *http.Request) bool {
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
@@ -17,6 +21,7 @@ func authenticateUser(r *http.Request) bool {
 	return true
 }
 
+// LotteriesHandler отображает список лотерей.
 func LotteriesHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
@@ -41,12 +46,13 @@ func LotteriesHandler(w http.ResponseWriter, r *http.Request) {
 		lotteries = append(lotteries, l)
 	}
 
-	tmpl.ExecuteTemplate(w, "lotteries.html", map[string]interface{}{
+	lotteryTmpl.ExecuteTemplate(w, "lotteries.html", map[string]interface{}{
 		"Lotteries": lotteries,
 		"Username":  cookie.Value,
 	})
 }
 
+// BuyLotteryHandler обрабатывает покупку билета пользователем.
 func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if !authenticateUser(r) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -54,7 +60,7 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		lotteryID := r.FormValue("lottery_id")
+		lotteryIDStr := r.FormValue("lottery_id")
 		cookie, err := r.Cookie("username")
 		if err != nil {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -62,10 +68,15 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		username := cookie.Value
 
-		_, err = db.DB.Exec("INSERT INTO purchases (username, lottery_id) VALUES ($1, $2)", username, lotteryID)
+		lotteryID, err := strconv.Atoi(lotteryIDStr)
 		if err != nil {
-			log.Println("BuyLottery error:", err)
-			http.Error(w, "Unable to complete purchase", http.StatusInternalServerError)
+			http.Error(w, "Invalid lottery ID", http.StatusBadRequest)
+			return
+		}
+
+		err = db.PurchaseTicket(username, lotteryID)
+		if err != nil {
+			http.Error(w, "Error purchasing ticket: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -76,6 +87,7 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 }
 
+// CreateLotteryHandler позволяет администратору создать новую лотерею.
 func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -86,25 +98,27 @@ func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		name := r.FormValue("name")
 		description := r.FormValue("description")
 		priceStr := r.FormValue("price")
-		endDateStr := r.FormValue("end_date")
-
 		price, err := strconv.ParseFloat(priceStr, 64)
 		if err != nil {
 			http.Error(w, "Invalid price", http.StatusBadRequest)
 			return
 		}
-
+		endDateStr := r.FormValue("end_date")
 		endDate, err := time.Parse("2006-01-02T15:04", endDateStr)
 		if err != nil {
 			http.Error(w, "Invalid end date", http.StatusBadRequest)
 			return
 		}
-
-		_, err = db.DB.Exec("INSERT INTO lotteries (name, description, price, end_date) VALUES ($1, $2, $3, $4)",
-			name, description, price, endDate)
+		ticketLimitStr := r.FormValue("ticket_limit")
+		ticketLimit, err := strconv.Atoi(ticketLimitStr)
 		if err != nil {
-			log.Println("Error inserting lottery:", err)
-			http.Error(w, "Unable to create lottery", http.StatusInternalServerError)
+			http.Error(w, "Invalid ticket limit", http.StatusBadRequest)
+			return
+		}
+
+		err = db.CreateLottery(name, description, price, endDate, ticketLimit)
+		if err != nil {
+			http.Error(w, "Error creating lottery: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -112,9 +126,10 @@ func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.ExecuteTemplate(w, "create_lottery.html", nil)
+	lotteryTmpl.ExecuteTemplate(w, "create_lottery.html", nil)
 }
 
+// UpdateLotteryHandler позволяет обновить данные лотереи.
 func UpdateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -128,7 +143,6 @@ func UpdateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	row := db.DB.QueryRow("SELECT id, name, description, price, end_date FROM lotteries WHERE id = $1", lotteryID)
-
 	var lottery models.Lottery
 	if err := row.Scan(&lottery.ID, &lottery.Name, &lottery.Description, &lottery.Price, &lottery.EndDate); err != nil {
 		http.Error(w, "Lottery not found", http.StatusNotFound)
@@ -139,14 +153,12 @@ func UpdateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		name := r.FormValue("name")
 		description := r.FormValue("description")
 		priceStr := r.FormValue("price")
-		endDateStr := r.FormValue("end_date")
-
 		price, err := strconv.ParseFloat(priceStr, 64)
 		if err != nil {
 			http.Error(w, "Invalid price", http.StatusBadRequest)
 			return
 		}
-
+		endDateStr := r.FormValue("end_date")
 		endDate, err := time.Parse("2006-01-02T15:04", endDateStr)
 		if err != nil {
 			http.Error(w, "Invalid end date", http.StatusBadRequest)
@@ -164,9 +176,10 @@ func UpdateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl.ExecuteTemplate(w, "update_lottery.html", lottery)
+	lotteryTmpl.ExecuteTemplate(w, "update_lottery.html", lottery)
 }
 
+// DeleteLotteryHandler удаляет лотерею.
 func DeleteLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -174,13 +187,30 @@ func DeleteLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lotteryID := r.URL.Query().Get("id")
-
 	_, err := db.DB.Exec("DELETE FROM lotteries WHERE id = $1", lotteryID)
 	if err != nil {
-		log.Println("Error deleting lottery:", err)
 		http.Error(w, "Unable to delete lottery", http.StatusInternalServerError)
 		return
 	}
 
 	http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
+}
+func AddPaymentCardHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		userIDStr := r.FormValue("user_id")
+		cardNumber := r.FormValue("card_number")
+		userID, err := strconv.Atoi(userIDStr)
+		if err != nil {
+			http.Error(w, "Invalid user ID", http.StatusBadRequest)
+			return
+		}
+		err = db.AddPaymentCard(userID, cardNumber)
+		if err != nil {
+			http.Error(w, "Error adding payment card: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "add_payment_card.html", nil)
 }

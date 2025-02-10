@@ -1,3 +1,4 @@
+// main.go
 package main
 
 import (
@@ -8,43 +9,51 @@ import (
 )
 
 func main() {
-	// Initialize DB
+	// Инициализируем БД
 	db.Init()
 	defer db.DB.Close()
 
-	// Initialize schema
+	// Инициализируем схему (таблицы)
 	if err := db.InitializeSchema(); err != nil {
 		log.Fatalf("Failed to initialize schema: %v", err)
 	}
 
+	// Пример: розыгрыш победителей для лотереи с ID = 1
 	err := db.DrawWinners(1)
 	if err != nil {
 		log.Printf("Error drawing winners: %v", err)
 	}
 
-	// Serve static files
+	// Статические файлы
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	// Routes
+	// Маршруты
 	http.HandleFunc("/", handlers.HomeHandler)
 	http.HandleFunc("/register", handlers.RegisterHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
 	http.HandleFunc("/logout", handlers.LogoutHandler)
 
-	// Lotteries routes
+	// Маршруты лотерей
 	http.HandleFunc("/lotteries", handlers.LotteriesHandler)
 	http.HandleFunc("/buy", handlers.BuyLotteryHandler)
 	http.HandleFunc("/lotteries/create", handlers.CreateLotteryHandler)
 	http.HandleFunc("/lotteries/update", handlers.UpdateLotteryHandler)
 	http.HandleFunc("/lotteries/delete", handlers.DeleteLotteryHandler)
 
-	// Draws routes (existing)
+
+	/////
+	http.HandleFunc("/admin", handlers.AdminDashboardHandler)
+	http.HandleFunc("/profile", handlers.ProfileHandler)
+
+	// Маршруты розыгрышей
 	http.HandleFunc("/draws", handlers.DrawsHandler)
 	http.HandleFunc("/draws/create", handlers.CreateDrawHandler)
 	http.HandleFunc("/draws/update", handlers.UpdateDrawHandler)
 	http.HandleFunc("/draws/delete", handlers.DeleteDrawHandler)
 
-	// Start server
+	// Маршрут для добавления платёжной карты
+	http.HandleFunc("/payment_card/add", handlers.AddPaymentCardHandler)
+
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
