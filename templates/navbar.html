@@ -1,7 +1,12 @@
-<div class="nav">
+<!-- templates/navbar.html -->
+<div class="navbar">
     {{ if .LoggedIn }}
-        <a href="/draws">Draws</a>  
+        <a href="/draws">Draws</a>
         <a href="/lotteries">Buy Tickets</a>
+        <a href="/profile">Profile</a>
+        {{ if eq .Username "admin" }}
+            <a href="/admin">Admin Dashboard</a>
+        {{ end }}
         <a href="/logout">Logout</a>
     {{ else }}
         <a href="/home">Home</a>

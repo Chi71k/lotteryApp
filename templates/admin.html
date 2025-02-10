@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <!-- какие-то общие ссылки -->
+        <a href="/logout">Logout</a>
+    </div>
+
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+
+        <h2>Lotteries</h2>
+        <a href="/lotteries/create">Create New Lottery</a>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>End Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {{range .Lotteries}}
+                <tr>
+                    <td>{{.ID}}</td>
+                    <td>{{.Name}}</td>
+                    <td>{{.Price}}</td>
+                    <td>{{.EndDate.Format "2006-01-02"}}</td>
+                    <td>
+                        <a href="/lotteries/update?id={{.ID}}">Edit</a>
+                        <a href="/lotteries/delete?id={{.ID}}">Delete</a>
+                    </td>
+                </tr>
+            {{else}}
+                <tr>
+                    <td colspan="5">No lotteries found.</td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+
+        <h2>Draws</h2>
+        <a href="/draws/create">Create New Draw</a>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Lottery ID</th>
+                    <th>Draw Date</th>
+                    <th>Winner</th>
+                    <th>Prize Amount</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {{range .Draws}}
+                <tr>
+                    <td>{{.ID}}</td>
+                    <td>{{.LotteryID}}</td>
+                    <td>{{.DrawDate}}</td>
+                    <td>{{.Winner}}</td>
+                    <td>{{.PrizeAmount}}</td>
+                    <td>
+                        <a href="/draws/update?id={{.ID}}">Edit</a>
+                        <a href="/draws/delete?id={{.ID}}">Delete</a>
+                    </td>
+                </tr>
+            {{else}}
+                <tr>
+                    <td colspan="6">No draws found.</td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

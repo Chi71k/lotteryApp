@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Навбар (зависит, как у вас устроено) -->
+    <div class="navbar">
+        <a href="/draws">Draws</a>
+        <a href="/lotteries">Buy Tickets</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <div class="container">
+        <h1>User Profile</h1>
+
+        <p><strong>Username:</strong> {{.User.Username}}</p>
+        <p><strong>Balance:</strong> ${{printf "%.2f" .User.Balance}}</p>
+
+        <!-- Картинка, если есть -->
+        {{if .ImageData}}
+        <div>
+            <img src="{{.ImageData}}" alt="Profile Picture" style="max-width:200px; height:auto;">
+        </div>
+        {{else}}
+        <p>No profile picture</p>
+        {{end}}
+
+        <!-- Форма для загрузки нового фото -->
+        <form method="post" enctype="multipart/form-data">
+            <label for="profile_picture">Upload JPG file:</label>
+            <input type="file" name="profile_picture" accept="image/jpeg">
+            <button type="submit">Upload</button>
+        </form>
+
+        <!-- Форма для пополнения баланса -->
+        <form method="post">
+            <label for="topup_amount">Top up balance (USD):</label>
+            <input type="number" step="0.01" name="topup_amount" min="0.01">
+            <button type="submit">Top Up</button>
+        </form>
+    </div>
+</body>
+</html>
