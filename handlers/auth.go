@@ -1,4 +1,3 @@
-// auth.go
 package handlers
 
 import (
@@ -11,18 +10,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var tmpl = template.Must(template.ParseGlob("templates/*.html"))
-
 type LoginData struct {
 	Error string
 }
 
-// HomeHandler отображает главную страницу.
+var session = map[string]string{}
+
+var tmpl = template.Must(template.ParseGlob("templates/*.html"))
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "home.html", nil)
 }
 
-// RegisterHandler обрабатывает регистрацию пользователей.
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("username")
@@ -34,7 +33,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = db.DB.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, string(hashedPassword))
+		_, err = db.DB.Exec("INSERT INTO users (username, password) VALUES ($1, $2)",
+			username, string(hashedPassword))
 		if err != nil {
 			log.Println("Error inserting user:", err)
 			http.Error(w, "Unable to register", http.StatusInternalServerError)
@@ -48,7 +48,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "register.html", nil)
 }
 
-// LoginHandler обрабатывает вход пользователей.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("username")
@@ -82,7 +81,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "login.html", nil)
 }
 
-// LogoutHandler выполняет выход пользователя.
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:   "username",
@@ -93,8 +91,6 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// isAdmin – вспомогательная функция для проверки прав администратора.
-// Здесь проверяется, что cookie "username" равен "admin". В реальном приложении следует использовать более надёжный механизм.
 func isAdmin(r *http.Request) bool {
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value != "admin" {

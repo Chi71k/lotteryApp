@@ -52,7 +52,6 @@ func main() {
 	http.HandleFunc("/draws/delete", handlers.DeleteDrawHandler)
 
 	// Маршрут для добавления платёжной карты
-	http.HandleFunc("/payment_card/add", handlers.AddPaymentCardHandler)
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
