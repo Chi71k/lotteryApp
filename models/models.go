@@ -2,15 +2,17 @@ package models
 
 import "time"
 
+// User структура для пользователя
 type User struct {
-	ID       int
-	Username string
-	Password string
-	Code     string
-	Balance  float64
-    ProfilePicture []byte
+	ID             int
+	Username       string
+	Password       string
+	Code           string
+	Balance        float64 // Баланс пользователя
+	ProfilePicture []byte  // Фото профиля
 }
 
+// Lottery структура для лотереи
 type Lottery struct {
 	ID          int
 	Name        string
@@ -19,7 +21,7 @@ type Lottery struct {
 	EndDate     time.Time
 }
 
-// Структура розыгрыша
+// Draw структура для розыгрыша
 type Draw struct {
 	ID          int
 	LotteryID   int

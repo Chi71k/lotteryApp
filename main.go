@@ -1,4 +1,3 @@
-// main.go
 package main
 
 import (
@@ -34,24 +33,28 @@ func main() {
 	http.HandleFunc("/logout", handlers.LogoutHandler)
 
 	// Маршруты лотерей
-	http.HandleFunc("/lotteries", handlers.LotteriesHandler)
-	http.HandleFunc("/buy", handlers.BuyLotteryHandler)
-	http.HandleFunc("/lotteries/create", handlers.CreateLotteryHandler)
-	http.HandleFunc("/lotteries/update", handlers.UpdateLotteryHandler)
-	http.HandleFunc("/lotteries/delete", handlers.DeleteLotteryHandler)
+	http.HandleFunc("/lotteries", handlers.LotteriesHandler)                  // Отображение всех лотерей
+	http.HandleFunc("/buy", handlers.BuyLotteryHandler)                        // Покупка билетов
+	http.HandleFunc("/lotteries/create", handlers.CreateLotteryHandler)       // Создание лотереи
+	http.HandleFunc("/lotteries/update", handlers.UpdateLotteryHandler)       // Обновление лотереи
+	http.HandleFunc("/lotteries/delete", handlers.DeleteLotteryHandler)       // Удаление лотереи
 
-
-	/////
-	http.HandleFunc("/admin", handlers.AdminDashboardHandler)
-	http.HandleFunc("/profile", handlers.ProfileHandler)
+	// Маршруты профиля и администрирования
+	http.HandleFunc("/admin", handlers.AdminDashboardHandler)                 // Админ панель
+	http.HandleFunc("/profile", handlers.ProfileHandler)                       // Профиль пользователя
 
 	// Маршруты розыгрышей
-	http.HandleFunc("/draws", handlers.DrawsHandler)
-	http.HandleFunc("/draws/create", handlers.CreateDrawHandler)
-	http.HandleFunc("/draws/update", handlers.UpdateDrawHandler)
-	http.HandleFunc("/draws/delete", handlers.DeleteDrawHandler)
+	http.HandleFunc("/draws", handlers.DrawsHandler)                           // Отображение всех розыгрышей
+	http.HandleFunc("/draws/create", handlers.CreateDrawHandler)              // Создание розыгрыша
+	http.HandleFunc("/draws/update", handlers.UpdateDrawHandler)              // Обновление розыгрыша
+	http.HandleFunc("/draws/delete", handlers.DeleteDrawHandler)              // Удаление розыгрыша
 
-	// Маршрут для добавления платёжной карты
+	// Добавление платёжной карты
+	http.HandleFunc("/payment/add", handlers.AddCardHandler)                  // Добавление платёжной карты
+	http.HandleFunc("/payment/validate", handlers.ValidateCardHandler)        // Валидация карты
+
+	// Маршрут для пополнения баланса
+	http.HandleFunc("/balance/recharge", handlers.RechargeBalanceHandler)     // Пополнение баланса
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

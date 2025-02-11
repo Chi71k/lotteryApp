@@ -65,7 +65,9 @@ func InitializeSchema() error {
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		username VARCHAR(50) UNIQUE NOT NULL,
-		password VARCHAR(255) NOT NULL
+		password VARCHAR(255) NOT NULL,
+		balance NUMERIC DEFAULT 0,
+		profile_picture BYTEA
 	);
 
 	CREATE TABLE IF NOT EXISTS lotteries (
@@ -80,7 +82,9 @@ func InitializeSchema() error {
 		id SERIAL PRIMARY KEY,
 		username VARCHAR(50),
 		lottery_id INT REFERENCES lotteries(id),
-		is_winner BOOLEAN DEFAULT FALSE
+		tickets_count INT,
+		card_number VARCHAR(20),
+		purchase_time TIMESTAMP
 	);
 
 	CREATE TABLE IF NOT EXISTS winning_tickets (
@@ -96,13 +100,23 @@ func InitializeSchema() error {
 		winner VARCHAR(100),
 		prize_amount NUMERIC
 	);
+
+	CREATE TABLE IF NOT EXISTS lottery_analysis (
+		lottery_id INT PRIMARY KEY,
+		total_sales INT,
+		remaining_tickets INT,
+		winners_count INT,
+		total_revenue NUMERIC,
+		sponsor_share NUMERIC,
+		charity_share NUMERIC
+	);
 	`
-	
 	_, err := DB.Exec(schema)
 	if err != nil {
 		return err
 	}
 
+	// Проверяем, есть ли лотереи в базе
 	checkQuery := "SELECT COUNT(*) FROM lotteries"
 	var count int
 	err = DB.QueryRow(checkQuery).Scan(&count)
@@ -110,6 +124,7 @@ func InitializeSchema() error {
 		return err
 	}
 
+	// Если лотерей нет, добавим несколько примеров
 	if count == 0 {
 		log.Println("Adding sample lotteries...")
 		insertQuery := `
@@ -117,7 +132,7 @@ func InitializeSchema() error {
 		('Mega Jackpot', 'Win the biggest prize in our history!', 100, '2025-12-31'),
 		('Holiday Special', 'Celebrate the holidays with amazing prizes!', 50, '2025-11-30'),
 		('Weekly Draw', 'Join our weekly draw for exciting rewards!', 20, '2025-10-15');`
-		
+
 		_, err := DB.Exec(insertQuery)
 		if err != nil {
 			return err
@@ -127,34 +142,18 @@ func InitializeSchema() error {
 	return nil
 }
 
-func GetWinningTickets() ([]int, error) {
-	query := "SELECT id FROM purchases WHERE is_winner = TRUE"
-	rows, err := DB.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var winningIDs []int
-	for rows.Next() {
-		var id int
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		winningIDs = append(winningIDs, id)
-	}
-	return winningIDs, nil
-}
-
-func PurchaseTicket(username string, lotteryID int) error {
+// Функция для покупки билетов
+func PurchaseTicket(username string, lotteryID int, ticketsCount int, cardNumber string) error {
 	tx, err := DB.Begin()
 	if err != nil {
 		log.Printf("Error starting transaction: %v", err)
 		return err
 	}
 
-	query := "INSERT INTO purchases (username, lottery_id) VALUES ($1, $2) RETURNING id"
+	// Вставляем покупку
+	query := "INSERT INTO purchases (username, lottery_id, tickets_count, card_number, purchase_time) VALUES ($1, $2, $3, $4, NOW()) RETURNING id"
 	var purchaseID int
-	err = tx.QueryRow(query, username, lotteryID).Scan(&purchaseID)
+	err = tx.QueryRow(query, username, lotteryID, ticketsCount, cardNumber).Scan(&purchaseID)
 	if err != nil {
 		log.Printf("Error inserting purchase: %v", err)
 		tx.Rollback()
@@ -162,6 +161,7 @@ func PurchaseTicket(username string, lotteryID int) error {
 	}
 	log.Printf("Ticket purchased: Purchase ID %d", purchaseID)
 
+	// Логика для случайного выбора победителя
 	randQuery := "UPDATE purchases SET is_winner = TRUE WHERE id = $1 AND random() < 0.6 RETURNING id"
 	var winnerID int
 	err = tx.QueryRow(randQuery, purchaseID).Scan(&winnerID)
@@ -191,6 +191,7 @@ func PurchaseTicket(username string, lotteryID int) error {
 	return nil
 }
 
+// Функция для розыгрыша победителей
 func DrawWinners(lotteryID int) error {
 	tx, err := DB.Begin()
 	if err != nil {
@@ -198,6 +199,7 @@ func DrawWinners(lotteryID int) error {
 		return err
 	}
 
+	// Обновляем таблицу покупок и выбираем победителей
 	query := "UPDATE purchases SET is_winner = TRUE WHERE lottery_id = $1 AND is_winner = FALSE AND random() < 0.6 RETURNING id"
 	rows, err := tx.Query(query, lotteryID)
 	if err != nil {
@@ -218,6 +220,7 @@ func DrawWinners(lotteryID int) error {
 		purchaseIDs = append(purchaseIDs, purchaseID)
 	}
 
+	// Добавляем победителей в таблицу winning_tickets
 	if len(purchaseIDs) > 0 {
 		for _, purchaseID := range purchaseIDs {
 			_, err = tx.Exec("INSERT INTO winning_tickets (purchase_id, winning_amount) VALUES ($1, 500)", purchaseID)
