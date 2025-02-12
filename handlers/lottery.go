@@ -116,8 +116,29 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		username := cookie.Value
 
 		if !validateLotteryNumbers(chosenNumbers) {
+			// Получаем список активных лотерей
+			rows, err := db.DB.Query("SELECT id, name, description, price, end_date FROM lotteries WHERE status = 'active'")
+			if err != nil {
+				http.Error(w, "Unable to fetch lotteries", http.StatusInternalServerError)
+				return
+			}
+			defer rows.Close()
+
+			var lotteries []models.Lottery
+			for rows.Next() {
+				var l models.Lottery
+				if err := rows.Scan(&l.ID, &l.Name, &l.Description, &l.Price, &l.EndDate); err != nil {
+					http.Error(w, "Error reading lotteries", http.StatusInternalServerError)
+					return
+				}
+				lotteries = append(lotteries, l)
+			}
+
+			// Отправляем ошибку и лотереи обратно в шаблон
 			data := map[string]interface{}{
-				"Error": "Invalid numbers. Choose 6 unique numbers between 1 and 49.",
+				"Error":     "Invalid numbers. Choose 6 unique numbers between 1 and 49.",
+				"Lotteries": lotteries,
+				"Username":  username,
 			}
 			tmpl.ExecuteTemplate(w, "lotteries.html", data)
 			return
@@ -177,6 +198,8 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 	}
 }
+
+
 
 // Create a new lottery
 func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
