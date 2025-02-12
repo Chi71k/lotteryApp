@@ -15,12 +15,6 @@
     </div>
     <div class="container">
         <h1>Draws</h1>
-
-        <!-- Show the Create New Draw link only for admin -->
-        {{if eq .Username "admin"}}
-        <a href="/draws/create">Create New Draw</a>
-        {{end}}
-
         <table>
             <thead>
                 <tr>

@@ -10,8 +10,8 @@ import (
 var DB *sql.DB
 
 const (
-	dbAdminConnection = "user=loto_user password=1234 dbname=postgres sslmode=disable"
-	dbConnection      = "user=loto_user password=1234 dbname=goproject sslmode=disable"
+	dbAdminConnection = "user=postgres password=Eroha100! dbname=postgres sslmode=disable"
+	dbConnection      = "user=postgres password=Eroha100! dbname=goproject sslmode=disable"
 )
 
 func Init() {

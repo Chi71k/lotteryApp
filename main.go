@@ -48,7 +48,6 @@ func main() {
 
 	// Маршруты розыгрышей
 	http.HandleFunc("/draws", handlers.DrawsHandler)             // Отображение всех розыгрышей
-	http.HandleFunc("/draws/create", handlers.CreateDrawHandler) // Создание розыгрыша
 	http.HandleFunc("/draws/update", handlers.UpdateDrawHandler) // Обновление розыгрыша
 	http.HandleFunc("/draws/delete", handlers.DeleteDrawHandler) // Удаление розыгрыша
 	// Пополнение баланса
