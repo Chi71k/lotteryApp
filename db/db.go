@@ -75,14 +75,15 @@ func InitializeSchema() error {
 		name VARCHAR(100),
 		description TEXT,
 		price NUMERIC,
-		end_date TIMESTAMP
+		end_date TIMESTAMP,
+		status VARCHAR(20) DEFAULT 'active'
 	);
 
 	CREATE TABLE IF NOT EXISTS purchases (
 		id SERIAL PRIMARY KEY,
 		username VARCHAR(50),
-		lottery_id INT REFERENCES lotteries(id),
-		tickets_count INT,
+		lottery_id INT,
+		chosen_numbers VARCHAR(100),
 		card_number VARCHAR(20),
 		purchase_time TIMESTAMP
 	);
@@ -97,6 +98,7 @@ func InitializeSchema() error {
 		id SERIAL PRIMARY KEY,
 		lottery_id INT REFERENCES lotteries(id),
 		draw_date TIMESTAMP NOT NULL,
+		winning_numbers VARCHAR(100),
 		winner VARCHAR(100),
 		prize_amount NUMERIC
 	);

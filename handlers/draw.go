@@ -4,11 +4,15 @@ import (
 	"log"
 	"loto/db"
 	"loto/models"
+	"math/rand"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
+// DrawsHandler handles displaying all draws
 func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
@@ -37,6 +41,152 @@ func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 		"Draws":    draws,
 		"Username": cookie.Value,
 	})
+}
+
+// PerformDraw automatically when a lottery ends
+func PerformDraw(lotteryID int) {
+	// Generate 6 fixed winning numbers for testing
+	winningNumbers := generateWinningNumbers()
+	winningNumbersStr := sortNumbers(numbersToString(winningNumbers))
+
+	log.Println("Performing draw for lottery:", lotteryID, "Winning Numbers:", winningNumbersStr)
+
+	// Calculate total prize amount based on ticket count
+	var totalPrizeAmount float64
+	err := db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1", lotteryID).Scan(&totalPrizeAmount)
+	if err != nil {
+		log.Println("Error calculating total ticket count:", err)
+		return
+	}
+
+	totalPrizeAmount *= getLotteryPrice(lotteryID) // Calculate prize pool
+
+	// Get all chosen numbers for the lottery and check for winners
+	rows, err := db.DB.Query("SELECT username, chosen_numbers FROM purchases WHERE lottery_id = $1", lotteryID)
+	if err != nil {
+		log.Println("Error fetching purchased numbers:", err)
+		return
+	}
+	defer rows.Close()
+
+	var winners []string
+
+	for rows.Next() {
+		var username string
+		var chosenNumbers string
+
+		if err := rows.Scan(&username, &chosenNumbers); err != nil {
+			log.Println("Error scanning purchased numbers:", err)
+			return
+		}
+
+		// Check if the user's numbers match the winning ones
+		if chosenNumbers == winningNumbersStr {
+			winners = append(winners, username)
+		}
+	}
+
+	var prizePerWinner float64
+	if len(winners) > 0 {
+		prizePerWinner = totalPrizeAmount / float64(len(winners)) // Divide prize equally
+	} else {
+		winners = append(winners, "No winner")
+		prizePerWinner = 0
+	}
+
+	// Insert draw results into the database
+	for _, winnerUsername := range winners {
+		_, err = db.DB.Exec(`
+			INSERT INTO draws (lottery_id, draw_date, winner, winning_numbers ,prize_amount) 
+			VALUES ($1, NOW(), $2, $3, $4)`, lotteryID, winnerUsername, winningNumbersStr, prizePerWinner)
+
+		if err != nil {
+			log.Println("Error inserting draw:", err)
+			return
+		}
+	}
+
+	// Mark lottery as ended
+	_, err = db.DB.Exec("UPDATE lotteries SET status = 'ended' WHERE id = $1", lotteryID)
+	if err != nil {
+		log.Println("Error updating lottery status:", err)
+	}
+}
+
+// Get lottery price
+func getLotteryPrice(lotteryID int) float64 {
+	var price float64
+	db.DB.QueryRow("SELECT price FROM lotteries WHERE id = $1", lotteryID).Scan(&price)
+	return price
+}
+
+// Helper function to generate 6 random unique numbers
+func generateWinningNumbers() []int {
+	rand.Seed(time.Now().UnixNano())
+	numbers := rand.Perm(49)[:6] // Generate numbers from 1 to 49
+	sort.Ints(numbers)           // Ensure sorted order
+	return numbers
+}
+
+// Convert slice of numbers to comma-separated string
+func numbersToString(numbers []int) string {
+	var strNumbers []string
+	for _, n := range numbers {
+		strNumbers = append(strNumbers, strconv.Itoa(n))
+	}
+	return strings.Join(strNumbers, ",")
+}
+
+// Sort numbers in a comma-separated string
+func sortNumbers(numbersStr string) string {
+	numbers := strings.Split(numbersStr, ",")
+	intNumbers := make([]int, len(numbers))
+
+	for i, num := range numbers {
+		n, err := strconv.Atoi(strings.TrimSpace(num))
+		if err != nil {
+			log.Println("Error parsing number:", num)
+			return ""
+		}
+		intNumbers[i] = n
+	}
+
+	sort.Ints(intNumbers)
+
+	var sortedNumbers []string
+	for _, n := range intNumbers {
+		sortedNumbers = append(sortedNumbers, strconv.Itoa(n))
+	}
+	return strings.Join(sortedNumbers, ",")
+}
+
+// Check and perform draw for lotteries that have ended
+func CheckForExpiredLotteries() {
+	rows, err := db.DB.Query("SELECT id FROM lotteries WHERE end_date <= NOW() AND status = 'active'")
+	if err != nil {
+		log.Println("Error fetching expired lotteries:", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var lotteryID int
+		if err := rows.Scan(&lotteryID); err != nil {
+			log.Println("Error scanning expired lottery:", err)
+			continue
+		}
+		PerformDraw(lotteryID)
+	}
+}
+
+// Scheduled function to check for expired lotteries every minute
+func StartDrawScheduler() {
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		for range ticker.C {
+			CheckForExpiredLotteries()
+		}
+	}()
 }
 
 func CreateDrawHandler(w http.ResponseWriter, r *http.Request) {

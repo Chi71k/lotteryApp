@@ -9,9 +9,9 @@
 <body style="height: auto;">
     <div class="navbar">
         <a href="/draws">Draws</a>
-        <a href="/lotteries">Buy Tickets</a>
-        <a href="/logout">Logout</a>
+        <a href="/lotteries">Lotteries</a>
         <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
     </div>
     <div class="container">
         <h1>Available Lotteries</h1>
@@ -28,8 +28,10 @@
                 <p>{{.Description}}</p>
                 <p>Price: ${{.Price}}</p>
                 <p>Ends on: {{.EndDate.Format "2006-01-02"}}</p>
+                <p>Choose 6 numbers (1-49):</p>
                 <form method="post" action="/buy">
                     <input type="hidden" name="lottery_id" value="{{.ID}}">
+                    <input type="text" name="chosen_numbers" placeholder="e.g. 5,12,23,34,41,47" required>
                     <button type="submit">Buy Ticket</button>
                     {{if eq $.Username "admin"}}
                         <a href="/lotteries/update?id={{.ID}}">Edit</a>
