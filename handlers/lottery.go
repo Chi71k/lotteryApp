@@ -116,7 +116,10 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		username := cookie.Value
 
 		if !validateLotteryNumbers(chosenNumbers) {
-			http.Error(w, "Invalid numbers. Choose 6 unique numbers between 1 and 49.", http.StatusBadRequest)
+			data := map[string]interface{}{
+				"Error": "Invalid numbers. Choose 6 unique numbers between 1 and 49.",
+			}
+			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
 			return
 		}
 
@@ -131,19 +134,28 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			log.Println("Database error:", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			data := map[string]interface{}{
+				"Error": "Internal server error",
+			}
+			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
 			return
 		}
 
 		if count > 0 {
-			http.Error(w, "You have already selected these numbers for this lottery. Please choose different numbers.", http.StatusBadRequest)
+			data := map[string]interface{}{
+				"Error": "You have already selected these numbers for this lottery. Please choose different numbers.",
+			}
+			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
 			return
 		}
 
 		// Insert purchase and update ticket count
 		tx, err := db.DB.Begin()
 		if err != nil {
-			http.Error(w, "Transaction error", http.StatusInternalServerError)
+			data := map[string]interface{}{
+				"Error": "Transaction error",
+			}
+			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
 			return
 		}
 
@@ -154,7 +166,10 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			tx.Rollback()
 			log.Println("BuyLottery error:", err)
-			http.Error(w, "Unable to complete purchase", http.StatusInternalServerError)
+			data := map[string]interface{}{
+				"Error": "Unable to complete purchase",
+			}
+			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
 			return
 		}
 
@@ -162,6 +177,8 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 	}
 }
+
+
 
 // Create a new lottery
 func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {

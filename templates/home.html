@@ -15,5 +15,11 @@
     <div class="container">
         <h1>Welcome to the Lottery Platform!</h1>
     </div>
+    {{if .Error}}
+<script>
+	alert("{{.Error}}");
+</script>
+{{end}}
+
 </body>
 </html>

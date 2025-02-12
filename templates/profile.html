@@ -43,5 +43,11 @@
             <button type="submit">Top Up</button>
         </form>
     </div>
+    {{if .Error}}
+<script>
+	alert("{{.Error}}");
+</script>
+{{end}}
+
 </body>
 </html>

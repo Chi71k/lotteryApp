@@ -30,14 +30,20 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 			_, err := io.Copy(&buf, file)
 			if err != nil {
 				log.Println("Error reading file:", err)
-				http.Error(w, "Unable to read file", http.StatusInternalServerError)
+				data := map[string]interface{}{
+					"Error": "Unable to read file",
+				}
+				tmpl.ExecuteTemplate(w, "profile.html", data)
 				return
 			}
 			// Обновляем профиль в БД
 			_, err = db.DB.Exec("UPDATE users SET profile_picture = $1 WHERE username = $2", buf.Bytes(), username)
 			if err != nil {
 				log.Println("Error updating profile picture:", err)
-				http.Error(w, "Unable to update profile picture", http.StatusInternalServerError)
+				data := map[string]interface{}{
+					"Error": "Unable to update profile picture",
+				}
+				tmpl.ExecuteTemplate(w, "profile.html", data)
 				return
 			}
 		}
@@ -50,7 +56,10 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 				_, err := db.DB.Exec("UPDATE users SET balance = balance + $1 WHERE username = $2", amount, username)
 				if err != nil {
 					log.Println("Error updating balance:", err)
-					http.Error(w, "Unable to update balance", http.StatusInternalServerError)
+					data := map[string]interface{}{
+						"Error": "Unable to update balance",
+					}
+					tmpl.ExecuteTemplate(w, "profile.html", data)
 					return
 				}
 			}
@@ -69,7 +78,10 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	err = row.Scan(&user.ID, &user.Password, &user.Balance, &user.ProfilePicture)
 	if err != nil {
 		log.Println("Error fetching user:", err)
-		http.Error(w, "Unable to fetch user", http.StatusInternalServerError)
+		data := map[string]interface{}{
+			"Error": "Unable to fetch user",
+		}
+		tmpl.ExecuteTemplate(w, "profile.html", data)
 		return
 	}
 
@@ -88,3 +100,4 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 
 	tmpl.ExecuteTemplate(w, "profile.html", data)
 }
+

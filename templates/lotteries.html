@@ -42,5 +42,11 @@
             {{end}}
         </div>
     </div>
+    {{if .Error}}
+<script>
+	alert("{{.Error}}");
+</script>
+{{end}}
+
 </body>
 </html>

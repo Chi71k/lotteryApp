@@ -22,7 +22,10 @@ func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query("SELECT id, lottery_id, draw_date, winner, prize_amount FROM draws")
 	if err != nil {
-		http.Error(w, "Unable to retrieve draws", http.StatusInternalServerError)
+		data := map[string]interface{}{
+			"Error": "Unable to retrieve draws",
+		}
+		tmpl.ExecuteTemplate(w, "draws.html", data)
 		return
 	}
 	defer rows.Close()
@@ -31,7 +34,10 @@ func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var draw models.Draw
 		if err := rows.Scan(&draw.ID, &draw.LotteryID, &draw.DrawDate, &draw.Winner, &draw.PrizeAmount); err != nil {
-			http.Error(w, "Error scanning draw data", http.StatusInternalServerError)
+			data := map[string]interface{}{
+				"Error": "Error scanning draw data",
+			}
+			tmpl.ExecuteTemplate(w, "draws.html", data)
 			return
 		}
 		draws = append(draws, draw)
@@ -42,6 +48,8 @@ func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 		"Username": cookie.Value,
 	})
 }
+
+
 
 // PerformDraw automatically when a lottery ends
 func PerformDraw(lotteryID int) {

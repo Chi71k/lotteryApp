@@ -52,5 +52,11 @@
             </tbody>
         </table>
     </div>
+    {{if .Error}}
+<script>
+	alert("{{.Error}}");
+</script>
+{{end}}
+
 </body>
 </html>
