@@ -215,7 +215,7 @@ func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 	}
 
-	tmpl.ExecuteTemplate(w, "lotteries.html", nil)
+	tmpl.ExecuteTemplate(w, "create_lottery.html", nil)
 }
 
 // Update lottery details
@@ -265,7 +265,7 @@ func UpdateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 
 		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 	}
-	tmpl.ExecuteTemplate(w, "lotteries.html", nil)
+	tmpl.ExecuteTemplate(w, "update_lottery.html", nil)
 }
 
 // Mark expired lotteries as "ended"
