@@ -91,7 +91,7 @@ func PerformDraw(lotteryID int) {
 		prizePerWinner = totalPrizeAmount / float64(len(winners)) // Divide prize equally
 	} else {
 		winners = append(winners, "No winner")
-		prizePerWinner = 0
+		prizePerWinner = totalPrizeAmount
 	}
 
 	// Insert draw results into the database
