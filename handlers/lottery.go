@@ -119,7 +119,7 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			data := map[string]interface{}{
 				"Error": "Invalid numbers. Choose 6 unique numbers between 1 and 49.",
 			}
-			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
+			tmpl.ExecuteTemplate(w, "lotteries.html", data)
 			return
 		}
 
@@ -137,7 +137,7 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			data := map[string]interface{}{
 				"Error": "Internal server error",
 			}
-			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
+			tmpl.ExecuteTemplate(w, "lotteries.html", data)
 			return
 		}
 
@@ -145,7 +145,7 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			data := map[string]interface{}{
 				"Error": "You have already selected these numbers for this lottery. Please choose different numbers.",
 			}
-			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
+			tmpl.ExecuteTemplate(w, "lotteries.html", data)
 			return
 		}
 
@@ -155,7 +155,7 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			data := map[string]interface{}{
 				"Error": "Transaction error",
 			}
-			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
+			tmpl.ExecuteTemplate(w, "lotteries.html", data)
 			return
 		}
 
@@ -169,7 +169,7 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			data := map[string]interface{}{
 				"Error": "Unable to complete purchase",
 			}
-			tmpl.ExecuteTemplate(w, "lottery_purchase.html", data)
+			tmpl.ExecuteTemplate(w, "lotteries.html", data)
 			return
 		}
 
@@ -177,8 +177,6 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 	}
 }
-
-
 
 // Create a new lottery
 func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
@@ -217,7 +215,7 @@ func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 	}
 
-	tmpl.ExecuteTemplate(w, "create_lottery.html", nil)
+	tmpl.ExecuteTemplate(w, "lotteries.html", nil)
 }
 
 // Update lottery details
@@ -267,7 +265,7 @@ func UpdateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 
 		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 	}
-	tmpl.ExecuteTemplate(w, "update_lottery.html", nil)
+	tmpl.ExecuteTemplate(w, "lotteries.html", nil)
 }
 
 // Mark expired lotteries as "ended"
