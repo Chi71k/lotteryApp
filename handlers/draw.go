@@ -49,6 +49,67 @@ func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func UpdateLotteryAnalysis(lotteryID int) error {
+	// Получаем общее количество проданных билетов для лотереи
+	var totalSales int
+	err := db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1", lotteryID).Scan(&totalSales)
+	if err != nil {
+		log.Println("Error calculating total sales:", err)
+		return err
+	}
+
+	// Получаем количество оставшихся билетов
+	var remainingTickets int
+	err = db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1 AND is_winner = FALSE", lotteryID).Scan(&remainingTickets)
+	if err != nil {
+		log.Println("Error calculating remaining tickets:", err)
+		return err
+	}
+
+	// Получаем количество победителей
+	var winnersCount int
+	err = db.DB.QueryRow("SELECT COUNT(*) FROM winning_tickets WHERE purchase_id IN (SELECT id FROM purchases WHERE lottery_id = $1)", lotteryID).Scan(&winnersCount)
+	if err != nil {
+		log.Println("Error calculating winners count:", err)
+		return err
+	}
+
+	// Рассчитываем общую выручку от продаж
+	var totalRevenue float64
+	err = db.DB.QueryRow("SELECT price FROM lotteries WHERE id = $1", lotteryID).Scan(&totalRevenue)
+	if err != nil {
+		log.Println("Error calculating total revenue:", err)
+		return err
+	}
+
+	totalRevenue *= float64(totalSales)
+
+	// Рассчитываем долю спонсора и благотворительности
+	sponsorShare := 0.75 * totalRevenue
+	charityShare := 0.25 * totalRevenue
+
+	// Обновляем таблицу lottery_analysis с результатами
+	_, err = db.DB.Exec(`
+		INSERT INTO lottery_analysis (lottery_id, total_sales, remaining_tickets, winners_count, total_revenue, sponsor_share, charity_share)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (lottery_id) 
+		DO UPDATE SET 
+			total_sales = EXCLUDED.total_sales,
+			remaining_tickets = EXCLUDED.remaining_tickets,
+			winners_count = EXCLUDED.winners_count,
+			total_revenue = EXCLUDED.total_revenue,
+			sponsor_share = EXCLUDED.sponsor_share,
+			charity_share = EXCLUDED.charity_share`,
+		lotteryID, totalSales, remainingTickets, winnersCount, totalRevenue, sponsorShare, charityShare)
+
+	if err != nil {
+		log.Println("Error updating lottery analysis:", err)
+		return err
+	}
+
+	log.Printf("Updated analysis for lottery %d", lotteryID)
+	return nil
+}
 
 
 // PerformDraw automatically when a lottery ends
@@ -119,7 +180,14 @@ func PerformDraw(lotteryID int) {
 	if err != nil {
 		log.Println("Error updating lottery status:", err)
 	}
+
+	// Обновляем таблицу анализа лотереи
+	err = UpdateLotteryAnalysis(lotteryID)
+	if err != nil {
+		log.Println("Error updating lottery analysis:", err)
+	}
 }
+
 
 // Get lottery price
 func getLotteryPrice(lotteryID int) float64 {
