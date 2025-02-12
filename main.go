@@ -43,8 +43,7 @@ func main() {
 	http.HandleFunc("/lotteries/delete", handlers.DeleteLotteryHandler) // Удаление лотереи
 
 	// Маршруты профиля и администрирования
-	http.HandleFunc("/admin", handlers.AdminDashboardHandler) // Админ панель
-	http.HandleFunc("/profile", handlers.ProfileHandler)      // Профиль пользователя
+	http.HandleFunc("/profile", handlers.ProfileHandler) // Профиль пользователя
 
 	// Маршруты розыгрышей
 	http.HandleFunc("/draws", handlers.DrawsHandler)             // Отображение всех розыгрышей

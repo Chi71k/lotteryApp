@@ -4,9 +4,6 @@
         <a href="/draws">Draws</a>
         <a href="/lotteries">Lotteries</a>
         <a href="/profile">Profile</a>
-        {{ if eq .Username "admin" }}
-            <a href="/admin">Admin Dashboard</a>
-        {{ end }}
         <a href="/logout">Logout</a>
     {{ else }}
         <a href="/home">Home</a>

@@ -14,7 +14,9 @@ type LoginData struct {
 	Error string
 }
 
-var session = map[string]string{}
+type RegisterData struct {
+	Error string
+}
 
 var tmpl = template.Must(template.ParseGlob("templates/*.html"))
 
@@ -29,7 +31,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			http.Error(w, "Server error, unable to create your account.", http.StatusInternalServerError)
+			data := RegisterData{Error: "Server error, unable to create your account."}
+			tmpl.ExecuteTemplate(w, "register.html", data) // Render with error
 			return
 		}
 
@@ -37,7 +40,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			username, string(hashedPassword))
 		if err != nil {
 			log.Println("Error inserting user:", err)
-			http.Error(w, "Unable to register", http.StatusInternalServerError)
+			data := RegisterData{Error: "Unable to register. Username might be taken."} // More specific error
+			tmpl.ExecuteTemplate(w, "register.html", data)                              // Render with error
 			return
 		}
 
