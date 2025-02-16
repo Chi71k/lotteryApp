@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Card and Top-up</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-image: url('static/lottery.png'); /* Add your background image */
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4); /* Black with transparency */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            margin: 20px;
+        }
+
+        h3 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .error {
+            color: red;
+            font-size: 14px;
+        }
+
+        .close-btn {
+            background-color: #d9534f;
+        }
+
+        .close-btn:hover {
+            background-color: #c9302c;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Modal for Payment -->
+    <div id="paymentModal" class="modal" style="display: flex;">
+        <div class="modal-content">
+            <h3>Toleu turin tandanyz</h3>
+            
+            <!-- Payment Method Selection -->
+            <select id="paymentMethod" required>
+                <option value="card">Credit/Debit Card</option>
+                <option value="paypal">PayPal</option>
+            </select>
+            
+            <!-- Card Number Input -->
+            <input id="cardNumber" type="text" placeholder="Номер карты" maxlength="16" oninput="validateNumericInput(this)">
+            
+            <!-- Expiration Date Input -->
+            <input id="expiryDate" type="text" placeholder="Срок действия (MM/YY)" maxlength="5" oninput="formatExpiryDate(this)">
+            
+            <!-- CVV Input -->
+            <input id="cvv" type="text" placeholder="CVV" maxlength="3" oninput="validateNumericInput(this)">
+            
+            <!-- Top-up Amount Input -->
+            <input id="topupAmount" type="number" placeholder="Amount to Top-up (USD)" min="0.01" step="0.01" required>
+            
+            <!-- Error Message -->
+            <div id="error-message" style="color: red; display: none;"></div>
+            
+            <!-- Buttons -->
+            <button id="pay-btn" class="pay-btn">Toleu</button>
+            <button class="close-btn" onclick="closeModal()">Bas tartý</button>
+        </div>
+    </div>
+
+    <!-- Modal Logic -->
+    <script>
+        // Close the modal
+        function closeModal() {
+    window.location.href = "/profile"; // Возвращаем пользователя на страницу профиля
+}
+
+
+        // Validate Numeric Input (for Card Number, CVV, etc.)
+        function validateNumericInput(input) {
+            input.value = input.value.replace(/\D/g, ''); // Only allow digits
+        }
+
+        // Format Expiry Date (MM/YY) and ensure correct input
+        function formatExpiryDate(input) {
+            input.value = input.value.replace(/[^\d\/]/g, ''); // Only allow digits and '/'
+            if (input.value.length === 2) {
+                input.value = input.value + '/'; // Add the separator automatically
+            }
+            if (input.value.length > 5) {
+                input.value = input.value.slice(0, 5); // Limit the input length to MM/YY
+            }
+        }
+
+        // Process the payment (validate input and update balance)
+        // Функция обработки платежа
+        function processPayment(event) {
+    event.preventDefault();
+
+    const cardNumber = document.getElementById("cardNumber").value;
+    const expiryDate = document.getElementById("expiryDate").value;
+    const cvv = document.getElementById("cvv").value;
+    const topupAmount = document.getElementById("topupAmount").value;
+    const username = getCookie("username"); // Получаем username из куки
+
+    if (!username) {
+        alert("Ошибка: пользователь не авторизован.");
+        return;
+    }
+
+    fetch('/process-payment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            cardNumber: cardNumber,
+            expiryDate: expiryDate,
+            cvv: cvv,
+            topupAmount: parseFloat(topupAmount),
+            username: username
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Payment Successful! Your balance is now $" + data.newBalance.toFixed(2));
+
+            // Обновляем баланс на странице профиля
+            localStorage.setItem("userBalance", data.newBalance);
+
+            window.location.href = "/profile"; // Перенаправляем пользователя на профиль
+        } else {
+            alert(data.error || 'Payment failed. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("An error occurred while processing the payment.");
+    });
+}
+
+// Функция получения username из куки
+function getCookie(name) {
+    let matches = document.cookie.match(new RegExp(
+        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+    ));
+    return matches ? decodeURIComponent(matches[1]) : undefined;
+}
+
+// Привязываем кнопку к функции
+document.getElementById("pay-btn").addEventListener("click", processPayment);
+
+    </script>
+</body>
+</html>

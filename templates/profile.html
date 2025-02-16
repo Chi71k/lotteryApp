@@ -29,25 +29,17 @@
         <p>No profile picture</p>
         {{end}}
 
+        <!-- Кнопка пополнить баланс -->
+        <form action="/add-card" method="get">
+            <button type="submit">Top Up Balance</button>
+        </form>
+
         <!-- Форма для загрузки нового фото -->
         <form method="post" enctype="multipart/form-data">
             <label for="profile_picture">Upload JPG file:</label>
             <input type="file" name="profile_picture" accept="image/jpeg">
             <button type="submit">Upload</button>
         </form>
-
-        <!-- Форма для пополнения баланса -->
-        <form method="post">
-            <label for="topup_amount">Top up balance (USD):</label>
-            <input type="number" step="0.01" name="topup_amount" min="0.01">
-            <button type="submit">Top Up</button>
-        </form>
     </div>
-    {{if .Error}}
-<script>
-	alert("{{.Error}}");
-</script>
-{{end}}
-
 </body>
 </html>

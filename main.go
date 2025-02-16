@@ -49,7 +49,11 @@ func main() {
 	http.HandleFunc("/draws", handlers.DrawsHandler)             // Отображение всех розыгрышей
 	http.HandleFunc("/draws/update", handlers.UpdateDrawHandler) // Обновление розыгрыша
 	http.HandleFunc("/draws/delete", handlers.DeleteDrawHandler) // Удаление розыгрыша
-	// Пополнение баланса
+	
+	http.HandleFunc("/process-payment", handlers.ProcessPayment)
+
+	// Пополнение баланса и добавление карты
+	http.HandleFunc("/add-card", handlers.AddCardHandler) // Страница добавления карты и пополнения баланса
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
