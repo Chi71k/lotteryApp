@@ -6,36 +6,52 @@
     <title>Lotteries</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body style="height: auto;">
-    <div class="navbar">
-        <a href="/draws">Draws</a>
-        <a href="/lotteries">Lotteries</a>
-        <a href="/profile">Profile</a>
-        <a href="/logout">Logout</a>
-    </div>
+<body>
+    <!-- Можно использовать общий шаблон navbar.html, но для наглядности покажу inline -->
+    <nav class="navbar">
+        <ul>
+            <li><a href="/draws">Draws</a></li>
+            <li><a href="/lotteries">Lotteries</a></li>
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="/logout">Logout</a></li>
+        </ul>
+    </nav>
+
     <div class="container">
         <h1>Available Lotteries</h1>
 
-        <!-- Show the Create New Lottery link only for admin -->
+        <!-- Admin-ссылка на создание новой лотереи -->
         {{if eq .Username "admin"}}
-        <a href="/lotteries/create">Create New Lottery</a>
+        <p>
+            <a class="btn btn-primary" href="/lotteries/create">Create New Lottery</a>
+        </p>
         {{end}}
 
-        <div class="lotteries">
+        <!-- Сетка лотерей -->
+        <div class="lotteries-grid">
             {{range .Lotteries}}
-            <div class="lottery">
+            <div class="lottery-card">
                 <h2>{{.Name}}</h2>
                 <p>{{.Description}}</p>
-                <p>Price: ${{.Price}}</p>
-                <p>Ends on: {{.EndDate.Format "2006-01-02"}}</p>
-                <p>Choose 6 numbers (1-49):</p>
-                <form method="post" action="/buy">
+                <p><strong>Price:</strong> ${{.Price}}</p>
+                <p><strong>Ends on:</strong> {{.EndDate.Format "2006-01-02"}}</p>
+
+                <form method="post" action="/buy" class="buy-form">
                     <input type="hidden" name="lottery_id" value="{{.ID}}">
-                    <input type="text" name="chosen_numbers" placeholder="e.g. 5,12,23,34,41,47" required>
-                    <button type="submit">Buy Ticket</button>
+                    <label for="chosen_numbers_{{.ID}}" class="sr-only">Choose 6 numbers (1-49)</label>
+                    <input 
+                        type="text" 
+                        id="chosen_numbers_{{.ID}}" 
+                        name="chosen_numbers" 
+                        placeholder="e.g. 5,12,23,34,41,47" 
+                        required
+                    >
+                    <button class="btn" type="submit">Buy Ticket</button>
+                    
+                    <!-- Если админ, показываем Edit/Delete -->
                     {{if eq $.Username "admin"}}
-                        <a href="/lotteries/update?id={{.ID}}">Edit</a>
-                        <a href="/lotteries/delete?id={{.ID}}">Delete</a>
+                        <a class="btn btn-secondary" href="/lotteries/update?id={{.ID}}">Edit</a>
+                        <a class="btn btn-danger" href="/lotteries/delete?id={{.ID}}">Delete</a>
                     {{end}}
                 </form>
             </div>

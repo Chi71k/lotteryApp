@@ -1,25 +1,94 @@
+{{ define "home.html" }}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lottery Home</title>
+    <title>Lottery Platform - Home</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="navbar">
-        <a href="/home">Home</a>
-        <a href="/register">Register</a>
-        <a href="/login">Login</a>
-    </div>
-    <div class="container">
-        <h1>Welcome to the Lottery Platform!</h1>
-    </div>
-    {{if .Error}}
-<script>
-	alert("{{.Error}}");
-</script>
-{{end}}
 
+    {{ template "navbar.html" . }}
+
+    <!-- Hero Section (пример) -->
+    <section class="hero">
+        <h1>Welcome to the Lottery Platform</h1>
+        <p>Join our platform and discover endless opportunities to win big!</p>
+        <a class="btn" href="javascript:void(0);" onclick="openModal('registerModal')">Get Started</a>
+    </section>
+
+    <!-- Container (пример) -->
+    <div class="container">
+        <section class="features">
+            <h2>Why Choose Us?</h2>
+            <div class="feature-cards">
+                <div class="feature-card">
+                    <h3>Fair Play</h3>
+                    <p>All draws are transparent and verifiable, ensuring fairness for every participant.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Multiple Lotteries</h3>
+                    <p>We offer a variety of lotteries with different jackpots and odds. Pick the one that suits you best!</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Instant Rewards</h3>
+                    <p>Winners are credited instantly. No long waits—just quick and easy payouts.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <h2>Ready to Test Your Luck?</h2>
+        <p>Sign up now and dive into the world of thrilling lotteries!</p>
+        <a class="btn" href="javascript:void(0);" onclick="openModal('registerModal')">Register Today</a>
+        <br><br>
+        <a class="btn" href="javascript:void(0);" onclick="openModal('loginModal')">Already a Member? Login</a>
+    </section>
+
+    <!-- Модалка: Регистрация -->
+    <div id="registerModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal('registerModal')">&times;</span>
+        <h2>Register</h2>
+
+        <!-- Место для вывода ошибок (пароль не подходит и т.п.) -->
+        <p id="registerError" class="error" style="display: none;"></p>
+
+        <!-- При сабмите вызываем JS-функцию для валидации -->
+        <form action="/home" method="POST" onsubmit="return validateRegisterForm()">
+            <label for="reg-username">Username</label>
+            <input type="text" id="reg-username" name="username" required>
+
+            <label for="reg-password">Password</label>
+            <input type="password" id="reg-password" name="password" required>
+
+            <input type="submit" value="Register">
+        </form>
+      </div>
+    </div>
+
+    <!-- Модалка: Логин -->
+    <div id="loginModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal('loginModal')">&times;</span>
+        <h2>Login</h2>
+        <!-- Можно выводить ошибку логина, если нужно -->
+        <form action="/login" method="POST">
+            <label for="login-username">Username</label>
+            <input type="text" id="login-username" name="username" required>
+
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" name="password" required>
+
+            <input type="submit" value="Login">
+        </form>
+      </div>
+    </div>
+
+    <!-- Подключаем JS для модалок и валидации -->
+    <script src="/static/script.js"></script>
 </body>
 </html>
+{{ end }}

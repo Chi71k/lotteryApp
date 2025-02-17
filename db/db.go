@@ -61,72 +61,87 @@ func createDatabaseIfNotExists(adminDB *sql.DB, dbName string) error {
 }
 
 func InitializeSchema() error {
-	schema := `
-	CREATE TABLE IF NOT EXISTS users (
-		id SERIAL PRIMARY KEY,
-		username VARCHAR(50) UNIQUE NOT NULL,
-		password VARCHAR(255) NOT NULL,
-		balance NUMERIC DEFAULT 0,
-		profile_picture BYTEA
-	);
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS users (
+			id SERIAL PRIMARY KEY,
+			username VARCHAR(50) UNIQUE NOT NULL,
+			password VARCHAR(255) NOT NULL,
+			balance NUMERIC DEFAULT 0,
+			profile_picture BYTEA
+		);`,
 
-	CREATE TABLE IF NOT EXISTS lotteries (
-		id SERIAL PRIMARY KEY,
-		name VARCHAR(100),
-		description TEXT,
-		price NUMERIC,
-		end_date TIMESTAMP,
-		status VARCHAR(20) DEFAULT 'active'
-	);
+		`CREATE TABLE IF NOT EXISTS payment_cards (
+			id SERIAL PRIMARY KEY,
+			username VARCHAR(50),
+			card_number VARCHAR(20),
+			amount NUMERIC
+		);`,
 
-	CREATE TABLE IF NOT EXISTS purchases (
-		id SERIAL PRIMARY KEY,
-		username VARCHAR(50),
-		lottery_id INT,
-		chosen_numbers VARCHAR(100),
-		card_number VARCHAR(20),
-		purchase_time TIMESTAMP
-	);
+		`ALTER TABLE payment_cards
+			ADD COLUMN IF NOT EXISTS expiry VARCHAR(5);`,
 
-	CREATE TABLE IF NOT EXISTS winning_tickets (
-		id SERIAL PRIMARY KEY,
-		purchase_id INT REFERENCES purchases(id),
-		winning_amount NUMERIC NOT NULL
-	);
+		`ALTER TABLE payment_cards
+			ADD COLUMN IF NOT EXISTS cvv VARCHAR(3);`,
 
-	CREATE TABLE IF NOT EXISTS draws (
-		id SERIAL PRIMARY KEY,
-		lottery_id INT REFERENCES lotteries(id),
-		draw_date TIMESTAMP NOT NULL,
-		winning_numbers VARCHAR(100),
-		winner VARCHAR(100),
-		prize_amount NUMERIC
-	);
+		`CREATE TABLE IF NOT EXISTS lotteries (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(100),
+			description TEXT,
+			price NUMERIC,
+			end_date TIMESTAMP,
+			status VARCHAR(20) DEFAULT 'active'
+		);`,
 
-	CREATE TABLE IF NOT EXISTS lottery_analysis (
-		lottery_id INT PRIMARY KEY,
-		total_sales INT,
-		remaining_tickets INT,
-		winners_count INT,
-		total_revenue NUMERIC,
-		sponsor_share NUMERIC,
-		charity_share NUMERIC
-	);
-	`
-	_, err := DB.Exec(schema)
-	if err != nil {
-		return err
+		`CREATE TABLE IF NOT EXISTS purchases (
+			id SERIAL PRIMARY KEY,
+			username VARCHAR(50),
+			lottery_id INT,
+			chosen_numbers VARCHAR(100),
+			card_number VARCHAR(20),
+			purchase_time TIMESTAMP
+		);`,
+
+		`CREATE TABLE IF NOT EXISTS winning_tickets (
+			id SERIAL PRIMARY KEY,
+			purchase_id INT REFERENCES purchases(id),
+			winning_amount NUMERIC NOT NULL
+		);`,
+
+		`CREATE TABLE IF NOT EXISTS draws (
+			id SERIAL PRIMARY KEY,
+			lottery_id INT REFERENCES lotteries(id),
+			draw_date TIMESTAMP NOT NULL,
+			winning_numbers VARCHAR(100),
+			winner VARCHAR(100),
+			prize_amount NUMERIC
+		);`,
+
+		`CREATE TABLE IF NOT EXISTS lottery_analysis (
+			lottery_id INT PRIMARY KEY,
+			total_sales INT,
+			remaining_tickets INT,
+			winners_count INT,
+			total_revenue NUMERIC,
+			sponsor_share NUMERIC,
+			charity_share NUMERIC
+		);`,
 	}
 
-	// Check if there are any lotteries in the database
+	for _, stmt := range statements {
+		_, err := DB.Exec(stmt)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Проверка наличия лотерей и вставка образцов, если их нет
 	checkQuery := "SELECT COUNT(*) FROM lotteries"
 	var count int
-	err = DB.QueryRow(checkQuery).Scan(&count)
+	err := DB.QueryRow(checkQuery).Scan(&count)
 	if err != nil {
 		return err
 	}
 
-	// If no lotteries, insert sample ones
 	if count == 0 {
 		log.Println("Adding sample lotteries...")
 		insertQuery := `
@@ -134,7 +149,6 @@ func InitializeSchema() error {
 		('Mega Jackpot', 'Win the biggest prize in our history!', 100, '2025-12-31'),
 		('Holiday Special', 'Celebrate the holidays with amazing prizes!', 50, '2025-11-30'),
 		('Weekly Draw', 'Join our weekly draw for exciting rewards!', 20, '2025-10-15');`
-
 		_, err := DB.Exec(insertQuery)
 		if err != nil {
 			return err
@@ -143,6 +157,7 @@ func InitializeSchema() error {
 	}
 	return nil
 }
+
 
 // Function for purchasing tickets
 func PurchaseTicket(username string, lotteryID int, ticketsCount int, cardNumber string) error {

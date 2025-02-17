@@ -31,7 +31,6 @@ func main() {
 
 	// Маршруты
 	http.HandleFunc("/", handlers.HomeHandler)
-	http.HandleFunc("/register", handlers.RegisterHandler)
 	http.HandleFunc("/login", handlers.LoginHandler)
 	http.HandleFunc("/logout", handlers.LogoutHandler)
 

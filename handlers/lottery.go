@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/base64"
+
 )
 
 // Authenticate the user via session cookie
@@ -26,10 +28,12 @@ func LotteriesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := db.DB.Query("SELECT id, name, description, price, end_date FROM lotteries WHERE status = 'active'")
-	if err != nil {
-		http.Error(w, "Unable to fetch lotteries", http.StatusInternalServerError)
-		return
-	}
+if err != nil {
+    log.Printf("Error fetching lotteries: %v", err)
+    http.Error(w, "Unable to fetch lotteries", http.StatusInternalServerError)
+    return
+}
+
 	defer rows.Close()
 
 	var lotteries []models.Lottery
@@ -340,43 +344,93 @@ func DeleteLotteryHandler(w http.ResponseWriter, r *http.Request) {
 
 // Add or update card and balance
 func AddCardHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("username")
-	if err != nil || cookie.Value == "" {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-	username := cookie.Value
+    cookie, err := r.Cookie("username")
+    if err != nil || cookie.Value == "" {
+        http.Redirect(w, r, "/login", http.StatusSeeOther)
+        return
+    }
+    username := cookie.Value
 
-	if r.Method == http.MethodPost {
-		cardNumber := r.FormValue("card_number")
-		amountStr := r.FormValue("amount")
-		amount, err := strconv.ParseFloat(amountStr, 64)
-		if err != nil || amount <= 0 {
-			http.Error(w, "Invalid amount", http.StatusBadRequest)
-			return
-		}
+    if r.Method == http.MethodPost {
+        cardNumber := r.FormValue("card_number")
+        expiry := r.FormValue("expiry")
+        cvv := r.FormValue("cvv")
+        amountStr := r.FormValue("amount")
 
-		// Insert card details and top-up balance
-		_, err = db.DB.Exec(
-			"INSERT INTO payment_cards (username, card_number, amount) VALUES ($1, $2, $3)",
-			username, cardNumber, amount)
-		if err != nil {
-			log.Println("Error inserting payment card:", err)
-			http.Error(w, "Unable to add card", http.StatusInternalServerError)
-			return
-		}
+        // Пробуем сконвертировать сумму
+        amount, err := strconv.ParseFloat(amountStr, 64)
+        if err != nil || amount <= 0 {
+            // Вместо http.Error -- показываем ошибку в модалке
+            data := map[string]interface{}{
+                "ErrorMsg":         "Invalid amount. Please enter a valid number > 0.",
+                "ShowPaymentModal": true,
+            }
+            // Нужно также вернуть текущие данные пользователя, иначе баланс/аватар пропадут
+            fillProfileData(username, data)
+            tmpl.ExecuteTemplate(w, "profile.html", data)
+            return
+        }
 
-		// Update user's balance
-		_, err = db.DB.Exec("UPDATE users SET balance = balance + $1 WHERE username = $2", amount, username)
-		if err != nil {
-			log.Println("Error updating balance:", err)
-			http.Error(w, "Unable to update balance", http.StatusInternalServerError)
-			return
-		}
+        // Пример вставки (если таблица payment_cards имеет колонки expiry, cvv)
+        _, err = db.DB.Exec(
+            "INSERT INTO payment_cards (username, card_number, expiry, cvv, amount) VALUES ($1, $2, $3, $4, $5)",
+            username, cardNumber, expiry, cvv, amount)
+        if err != nil {
+            log.Println("Error inserting payment card:", err)
+            data := map[string]interface{}{
+                "ErrorMsg":         "Unable to add card. Please try again.",
+                "ShowPaymentModal": true,
+            }
+            fillProfileData(username, data)
+            tmpl.ExecuteTemplate(w, "profile.html", data)
+            return
+        }
 
-		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
-		return
-	}
+        // Обновляем баланс
+        _, err = db.DB.Exec("UPDATE users SET balance = balance + $1 WHERE username = $2", amount, username)
+        if err != nil {
+            log.Println("Error updating balance:", err)
+            data := map[string]interface{}{
+                "ErrorMsg":         "Unable to update balance.",
+                "ShowPaymentModal": true,
+            }
+            fillProfileData(username, data)
+            tmpl.ExecuteTemplate(w, "profile.html", data)
+            return
+        }
 
-	tmpl.ExecuteTemplate(w, "add_card.html", nil)
+        // Успешно -> возвращаемся на /profile
+        http.Redirect(w, r, "/profile", http.StatusSeeOther)
+        return
+    }
+
+    // Если GET - рендерим profile.html или add_card.html (на твой выбор)
+    // Но если всё делается модалкой, лучше сразу на /profile
+    http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
+
+// fillProfileData - утилита, чтобы заново заполнить данные профиля (User, ImageData)
+// чтобы при рендере profile.html не потерять аватар/баланс
+func fillProfileData(username string, data map[string]interface{}) {
+    // Получаем пользователя
+    row := db.DB.QueryRow("SELECT id, password, balance, profile_picture FROM users WHERE username=$1", username)
+    var user models.User
+    user.Username = username
+    err := row.Scan(&user.ID, &user.Password, &user.Balance, &user.ProfilePicture)
+    if err != nil {
+        log.Println("Error fetching user in fillProfileData:", err)
+        return
+    }
+
+    // Base64-аватар, если есть
+    var base64Img string
+    if len(user.ProfilePicture) > 0 {
+        encoded := base64.StdEncoding.EncodeToString(user.ProfilePicture)
+        base64Img = "data:image/jpeg;base64," + encoded
+    }
+
+    // Пишем в data
+    data["User"] = user
+    data["ImageData"] = base64Img
+}
+

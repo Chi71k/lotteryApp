@@ -1,3 +1,4 @@
+{{ define "profile.html" }}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,40 +7,120 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- Навбар (зависит, как у вас устроено) -->
-    <div class="navbar">
-        <a href="/draws">Draws</a>
-        <a href="/lotteries">Lotteries</a>
-        <a href="/profile">Profile</a>
-        <a href="/logout">Logout</a>
-    </div>
 
-    <div class="container">
-        <h1>User Profile</h1>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <ul>
+            <li><a href="/draws">Draws</a></li>
+            <li><a href="/lotteries">Lotteries</a></li>
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="/logout">Logout</a></li>
+        </ul>
+    </nav>
 
-        <p><strong>Username:</strong> {{.User.Username}}</p>
-        <p><strong>Balance:</strong> ${{printf "%.2f" .User.Balance}}</p>
+    <!-- Шапка профиля -->
+    <div class="profile-header">
+        <div class="cover-photo"></div>
+        <div class="profile-info">
+            <div class="avatar-wrapper">
+                {{if .ImageData}}
+                    <img src="{{.ImageData}}" alt="Profile Picture" class="avatar">
+                {{else}}
+                    <img src="/static/default-avatar.png" alt="No profile picture" class="avatar">
+                {{end}}
+            </div>
 
-        <!-- Картинка, если есть -->
-        {{if .ImageData}}
-        <div>
-            <img src="{{.ImageData}}" alt="Profile Picture" style="max-width:200px; height:auto;">
+            <div class="user-details">
+                <h1 class="username">{{.User.Username}}</h1>
+                <p class="balance">Balance: ${{printf "%.2f" .User.Balance}}</p>
+
+                <!-- Кнопка, открывающая модалку пополнения баланса -->
+                <button type="button" class="btn btn-primary" onclick="openModal('paymentModal')">
+                    Top Up Balance
+                </button>
+            </div>
         </div>
-        {{else}}
-        <p>No profile picture</p>
-        {{end}}
-
-        <!-- Кнопка пополнить баланс -->
-        <form action="/add-card" method="get">
-            <button type="submit">Top Up Balance</button>
-        </form>
-
-        <!-- Форма для загрузки нового фото -->
-        <form method="post" enctype="multipart/form-data">
-            <label for="profile_picture">Upload JPG file:</label>
-            <input type="file" name="profile_picture" accept="image/jpeg">
-            <button type="submit">Upload</button>
-        </form>
     </div>
+
+    <!-- Основной контент -->
+    <div class="container">
+        <!-- Загрузка новой фотки -->
+        <section class="upload-section">
+            <h2>Upload a new profile picture</h2>
+            <form method="post" enctype="multipart/form-data">
+                <label for="profile_picture" class="sr-only">Upload JPG file</label>
+                <input 
+                    type="file" 
+                    name="profile_picture" 
+                    id="profile_picture" 
+                    accept="image/jpeg"
+                >
+                <button type="submit" class="btn btn-secondary">Upload</button>
+            </form>
+        </section>
+    </div>
+
+    <!-- Модалка для пополнения баланса -->
+    <!-- Если .ShowPaymentModal == true, откроем её сразу (style="display:block;") -->
+    <div id="paymentModal" class="modal" {{if .ShowPaymentModal}}style="display:block;"{{end}}>
+      <div class="modal-content">
+        <span class="close" onclick="closeModal('paymentModal')">&times;</span>
+        <h2>Choose a payment method</h2>
+
+        <!-- Если есть ошибка, покажем её красным текстом -->
+        {{ if .ErrorMsg }}
+          <p class="error" style="color: #d9534f; font-weight: bold;">
+            {{.ErrorMsg}}
+          </p>
+        {{ end }}
+
+        <form action="/add-card" method="POST" onsubmit="return validateCardForm()">
+          <label for="card_number">Card Number (16 digits)</label>
+          <input 
+            type="text" 
+            name="card_number" 
+            id="card_number" 
+            placeholder="e.g. 1234123412341234" 
+            required
+          >
+
+          <label for="expiry">Expiry (MM/YY)</label>
+          <input 
+            type="text" 
+            name="expiry" 
+            id="expiry" 
+            placeholder="e.g. 08/25" 
+            required
+          >
+
+          <label for="cvv">CVV (3 digits)</label>
+          <input 
+            type="text" 
+            name="cvv" 
+            id="cvv" 
+            placeholder="123" 
+            required
+          >
+
+          <label for="amount">Amount to Top-up (USD)</label>
+          <input 
+            type="number" 
+            name="amount" 
+            id="amount" 
+            placeholder="50" 
+            min="1"
+            step="0.01"
+            required
+          >
+
+          <button type="submit" class="btn btn-primary">Top up</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('paymentModal')">Back</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- JS для модалок и валидации карты -->
+    <script src="/static/script.js"></script>
 </body>
 </html>
+{{ end }}
