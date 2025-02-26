@@ -1,62 +1,94 @@
+{{ define "draws.html" }}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Draws</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8">
+  <title>Draws</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .draws-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .draws-table th,
+    .draws-table td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+    }
+    .draws-table th {
+      background-color: #f5f5f5;
+      font-weight: 600;
+    }
+    .draws-table tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+    .draws-table tr:hover {
+      background-color: #f1f1f1;
+    }
+    .no-data {
+      text-align: center;
+      padding: 20px;
+      color: #777;
+    }
+  </style>
 </head>
-<body style="height: auto;">
-    <div class="navbar">
-        <a href="/draws">Draws</a>
-        <a href="/lotteries">Lotteries</a>
-        <a href="/profile">Profile</a>
-        <a href="/logout">Logout</a>
-    </div>
-    <div class="container">
-        <h1>Draws</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Lottery</th>
-                    <th>Draw Date</th>
-                    <th>Winner</th>
-                    <th>Prize Amount</th>
-                    {{if eq $.Username "admin"}}
-                    <th>Actions</th>
-                    {{end}}
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Draws}}
-                    <tr>
-                        <td>{{.ID}}</td>
-                        <td>{{.LotteryID}}</td>
-                        <td>{{.DrawDate}}</td>
-                        <td>{{.Winner}}</td>
-                        <td>{{.PrizeAmount}}</td>
-                        <td>
-                            <!-- Show Edit and Delete buttons only for admin -->
-                            {{if eq $.Username "admin"}}
-                            <a href="/draws/update?id={{.ID}}">Edit</a>
-                            <a href="/draws/delete?id={{.ID}}">Delete</a>
-                            {{end}}
-                        </td>
-                    </tr>
-                {{else}}
-                    <tr>
-                        <td colspan="6">No draws available</td>
-                    </tr>
-                {{end}}
-            </tbody>
-        </table>
-    </div>
-    {{if .Error}}
-<script>
-	alert("{{.Error}}");
-</script>
-{{end}}
+<body>
+  <nav class="navbar">
+    <ul>
+      <li><a href="/draws">Draws</a></li>
+      <li><a href="/lotteries">Lotteries</a></li>
+      <li><a href="/profile">Profile</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </nav>
 
+  <div class="container">
+    <h1>Draws</h1>
+    <table class="draws-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Lottery</th>
+          <th>Draw Date</th>
+          <th>Winner</th>
+          <th>Prize Amount</th>
+          {{ if eq $.Username "admin" }}
+            <th>Actions</th>
+          {{ end }}
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .Draws }}
+          <tr>
+            <td>{{ .ID }}</td>
+            <td>{{ .LotteryID }}</td>
+            <td>{{ .DrawDate.Format "2006-01-02 15:04" }}</td>
+            <td>{{ .Winner }}</td>
+            <td>${{ printf "%.2f" .PrizeAmount }}</td>
+            <td>
+              {{ if eq $.Username "admin" }}
+                <a class="btn btn-secondary" href="/draws/update?id={{ .ID }}">Edit</a>
+                <a class="btn btn-danger" href="/draws/delete?id={{ .ID }}">Delete</a>
+              {{ end }}
+            </td>
+          </tr>
+        {{ else }}
+          <tr>
+            <td colspan="6" class="no-data">No draws available</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+
+  {{ if .Error }}
+    <script>
+      alert("{{ .Error }}");
+    </script>
+  {{ end }}
 </body>
 </html>
+{{ end }}

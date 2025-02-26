@@ -13,13 +13,11 @@ import (
 
 )
 
-// Authenticate the user via session cookie
 func authenticateUser(r *http.Request) bool {
 	cookie, err := r.Cookie("username")
 	return err == nil && cookie.Value != ""
 }
 
-// Fetch only active lotteries
 func LotteriesHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
@@ -52,7 +50,6 @@ if err != nil {
 	})
 }
 
-// Validate lottery numbers (6 unique numbers between 1 and 49)
 func validateLotteryNumbers(numbers string) bool {
 	numSet := make(map[int]bool)
 	numArr := strings.Split(numbers, ",")
@@ -76,12 +73,10 @@ func validateLotteryNumbers(numbers string) bool {
 	return true
 }
 
-// Helper function to normalize (sort) chosen numbers
 func normalizeNumbers(numbers string) string {
 	numArr := strings.Split(numbers, ",")
 	nums := make([]int, len(numArr))
 
-	// Convert to integers
 	for i, numStr := range numArr {
 		num, err := strconv.Atoi(strings.TrimSpace(numStr))
 		if err != nil {
@@ -90,10 +85,8 @@ func normalizeNumbers(numbers string) string {
 		nums[i] = num
 	}
 
-	// Sort numbers
 	sort.Ints(nums)
 
-	// Convert back to string
 	strArr := make([]string, len(nums))
 	for i, num := range nums {
 		strArr[i] = strconv.Itoa(num)
@@ -102,7 +95,6 @@ func normalizeNumbers(numbers string) string {
 	return strings.Join(strArr, ",") // Return sorted numbers as a single string
 }
 
-// Handle ticket purchases
 func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if !authenticateUser(r) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -120,7 +112,6 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 		lotteryID := r.FormValue("lottery_id")
 		chosenNumbers := r.FormValue("chosen_numbers")
 
-		// Check if the user has sufficient balance
 		var balance float64
 		err = db.DB.QueryRow("SELECT balance FROM users WHERE username = $1", username).Scan(&balance)
 		if err != nil {
@@ -128,7 +119,6 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Fetch the lottery price
 		var lotteryPrice float64
 		err = db.DB.QueryRow("SELECT price FROM lotteries WHERE id = $1", lotteryID).Scan(&lotteryPrice)
 		if err != nil {
@@ -136,16 +126,12 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Check if the user has enough balance
 		if balance < lotteryPrice {
-			// Redirect to /add-card if the balance is insufficient
 			http.Redirect(w, r, "/add-card", http.StatusSeeOther)
 			return
 		}
 
-		// Validate and normalize lottery numbers
 		if !validateLotteryNumbers(chosenNumbers) {
-			// Fetch active lotteries
 			rows, err := db.DB.Query("SELECT id, name, description, price, end_date FROM lotteries WHERE status = 'active'")
 			if err != nil {
 				http.Error(w, "Unable to fetch lotteries", http.StatusInternalServerError)
@@ -163,7 +149,6 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 				lotteries = append(lotteries, l)
 			}
 
-			// Return error message
 			data := map[string]interface{}{
 				"Error":     "Invalid numbers. Choose 6 unique numbers between 1 and 49.",
 				"Lotteries": lotteries,
@@ -173,10 +158,30 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Normalize the chosen numbers
 		normalizedNumbers := normalizeNumbers(chosenNumbers)
 
-		// Insert purchase and update ticket count
+		var count int
+		err = db.DB.QueryRow(`
+			SELECT COUNT(*) 
+			FROM purchases 
+			WHERE username = $1 
+			  AND lottery_id = $2 
+			  AND chosen_numbers = $3
+		`, username, lotteryID, normalizedNumbers).Scan(&count)
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		if count > 0 {
+			data := map[string]interface{}{
+				"Error":    "You already purchased these exact numbers for this lottery!",
+				"Username": username,
+			}
+			tmpl.ExecuteTemplate(w, "lotteries.html", data)
+			return
+		}
+
 		tx, err := db.DB.Begin()
 		if err != nil {
 			data := map[string]interface{}{
@@ -186,11 +191,9 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Insert the purchase into the database
 		_, err = tx.Exec(
 			"INSERT INTO purchases (username, lottery_id, chosen_numbers, purchase_time) VALUES ($1, $2, $3, NOW())",
 			username, lotteryID, normalizedNumbers)
-
 		if err != nil {
 			tx.Rollback()
 			log.Println("BuyLottery error:", err)
@@ -201,7 +204,6 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Deduct the lottery price from the user's balance
 		_, err = tx.Exec("UPDATE users SET balance = balance - $1 WHERE username = $2", lotteryPrice, username)
 		if err != nil {
 			tx.Rollback()
@@ -213,15 +215,23 @@ func BuyLotteryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		tx.Commit()
+		if err := tx.Commit(); err != nil {
+			log.Println("Error committing transaction:", err)
+			data := map[string]interface{}{
+				"Error": "Transaction commit failed",
+			}
+			tmpl.ExecuteTemplate(w, "lotteries.html", data)
+			return
+		}
+
 		http.Redirect(w, r, "/lotteries", http.StatusSeeOther)
 	}
 }
 
+
 	
 
 
-// Create a new lottery
 func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -261,7 +271,6 @@ func CreateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "create_lottery.html", nil)
 }
 
-// Update lottery details
 func UpdateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -311,7 +320,6 @@ func UpdateLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, "update_lottery.html", nil)
 }
 
-// Mark expired lotteries as "ended"
 func RemoveExpiredLotteries() {
 	for {
 		time.Sleep(1 * time.Minute)
@@ -323,7 +331,6 @@ func RemoveExpiredLotteries() {
 	}
 }
 
-// Delete a lottery
 func DeleteLotteryHandler(w http.ResponseWriter, r *http.Request) {
 	if !isAdmin(r) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -342,7 +349,6 @@ func DeleteLotteryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-// Add or update card and balance
 func AddCardHandler(w http.ResponseWriter, r *http.Request) {
     cookie, err := r.Cookie("username")
     if err != nil || cookie.Value == "" {
@@ -357,36 +363,34 @@ func AddCardHandler(w http.ResponseWriter, r *http.Request) {
         cvv := r.FormValue("cvv")
         amountStr := r.FormValue("amount")
 
-        // Пробуем сконвертировать сумму
         amount, err := strconv.ParseFloat(amountStr, 64)
         if err != nil || amount <= 0 {
-            // Вместо http.Error -- показываем ошибку в модалке
             data := map[string]interface{}{
                 "ErrorMsg":         "Invalid amount. Please enter a valid number > 0.",
                 "ShowPaymentModal": true,
             }
-            // Нужно также вернуть текущие данные пользователя, иначе баланс/аватар пропадут
             fillProfileData(username, data)
             tmpl.ExecuteTemplate(w, "profile.html", data)
             return
         }
 
-        // Пример вставки (если таблица payment_cards имеет колонки expiry, cvv)
+		cardNumber = r.FormValue("card_number")
+		cardNumber = strings.ReplaceAll(cardNumber, " ", "")
+
         _, err = db.DB.Exec(
             "INSERT INTO payment_cards (username, card_number, expiry, cvv, amount) VALUES ($1, $2, $3, $4, $5)",
             username, cardNumber, expiry, cvv, amount)
-        if err != nil {
-            log.Println("Error inserting payment card:", err)
-            data := map[string]interface{}{
-                "ErrorMsg":         "Unable to add card. Please try again.",
-                "ShowPaymentModal": true,
-            }
-            fillProfileData(username, data)
-            tmpl.ExecuteTemplate(w, "profile.html", data)
-            return
-        }
+        	if err != nil {
+				log.Println("Error inserting payment card:", err)
+				data := map[string]interface{}{
+					"ErrorMsg":         "Unable to add card. Please try again.",
+					"ShowPaymentModal": true,
+				}
+				fillProfileData(username, data)
+				tmpl.ExecuteTemplate(w, "profile.html", data)
+				return
+        	}
 
-        // Обновляем баланс
         _, err = db.DB.Exec("UPDATE users SET balance = balance + $1 WHERE username = $2", amount, username)
         if err != nil {
             log.Println("Error updating balance:", err)
@@ -399,20 +403,14 @@ func AddCardHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
 
-        // Успешно -> возвращаемся на /profile
         http.Redirect(w, r, "/profile", http.StatusSeeOther)
         return
     }
 
-    // Если GET - рендерим profile.html или add_card.html (на твой выбор)
-    // Но если всё делается модалкой, лучше сразу на /profile
     http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
 
-// fillProfileData - утилита, чтобы заново заполнить данные профиля (User, ImageData)
-// чтобы при рендере profile.html не потерять аватар/баланс
 func fillProfileData(username string, data map[string]interface{}) {
-    // Получаем пользователя
     row := db.DB.QueryRow("SELECT id, password, balance, profile_picture FROM users WHERE username=$1", username)
     var user models.User
     user.Username = username
@@ -422,14 +420,12 @@ func fillProfileData(username string, data map[string]interface{}) {
         return
     }
 
-    // Base64-аватар, если есть
     var base64Img string
     if len(user.ProfilePicture) > 0 {
         encoded := base64.StdEncoding.EncodeToString(user.ProfilePicture)
         base64Img = "data:image/jpeg;base64," + encoded
     }
 
-    // Пишем в data
     data["User"] = user
     data["ImageData"] = base64Img
 }

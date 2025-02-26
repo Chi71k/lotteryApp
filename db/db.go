@@ -96,9 +96,11 @@ func InitializeSchema() error {
 			id SERIAL PRIMARY KEY,
 			username VARCHAR(50),
 			lottery_id INT,
+			tickets_count INT,
 			chosen_numbers VARCHAR(100),
 			card_number VARCHAR(20),
-			purchase_time TIMESTAMP
+			purchase_time TIMESTAMP,
+			is_winner BOOLEAN DEFAULT false
 		);`,
 
 		`CREATE TABLE IF NOT EXISTS winning_tickets (
@@ -159,7 +161,6 @@ func InitializeSchema() error {
 }
 
 
-// Function for purchasing tickets
 func PurchaseTicket(username string, lotteryID int, ticketsCount int, cardNumber string) error {
 	tx, err := DB.Begin()
 	if err != nil {
@@ -167,7 +168,6 @@ func PurchaseTicket(username string, lotteryID int, ticketsCount int, cardNumber
 		return err
 	}
 
-	// Insert the purchase
 	query := "INSERT INTO purchases (username, lottery_id, tickets_count, card_number, purchase_time) VALUES ($1, $2, $3, $4, NOW()) RETURNING id"
 	var purchaseID int
 	err = tx.QueryRow(query, username, lotteryID, ticketsCount, cardNumber).Scan(&purchaseID)
@@ -178,7 +178,6 @@ func PurchaseTicket(username string, lotteryID int, ticketsCount int, cardNumber
 	}
 	log.Printf("Ticket purchased: Purchase ID %d", purchaseID)
 
-	// Logic for randomly selecting the winner
 	randQuery := "UPDATE purchases SET is_winner = TRUE WHERE id = $1 AND random() < 0.6 RETURNING id"
 	var winnerID int
 	err = tx.QueryRow(randQuery, purchaseID).Scan(&winnerID)
@@ -191,7 +190,6 @@ func PurchaseTicket(username string, lotteryID int, ticketsCount int, cardNumber
 			return err
 		}
 	} else {
-		// Insert the winning ticket into the winning_tickets table
 		winningAmount := 500.0 // Example win amount
 		_, err = tx.Exec("INSERT INTO winning_tickets (purchase_id, winning_amount) VALUES ($1, $2)", winnerID, winningAmount)
 		if err != nil {
@@ -210,7 +208,6 @@ func PurchaseTicket(username string, lotteryID int, ticketsCount int, cardNumber
 	return nil
 }
 
-// Function for drawing winners
 func DrawWinners(lotteryID int) error {
 	tx, err := DB.Begin()
 	if err != nil {
@@ -218,7 +215,6 @@ func DrawWinners(lotteryID int) error {
 		return err
 	}
 
-	// Update purchases table and select winners
 	query := "UPDATE purchases SET is_winner = TRUE WHERE lottery_id = $1 AND is_winner = FALSE AND random() < 0.6 RETURNING id"
 	rows, err := tx.Query(query, lotteryID)
 	if err != nil {
@@ -239,7 +235,6 @@ func DrawWinners(lotteryID int) error {
 		purchaseIDs = append(purchaseIDs, purchaseID)
 	}
 
-	// Insert winners into the winning_tickets table
 	if len(purchaseIDs) > 0 {
 		for _, purchaseID := range purchaseIDs {
 			winningAmount := 500.0 // Example win amount

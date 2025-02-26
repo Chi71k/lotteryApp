@@ -12,7 +12,6 @@ import (
 )
 
 func ProfileHandler(w http.ResponseWriter, r *http.Request) {
-	// Проверяем, что пользователь залогинен (кука username есть и не пустая)
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -20,12 +19,13 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	username := cookie.Value
 
-	// Обрабатываем POST-запрос (загрузка файла/пополнение баланса)
 	if r.Method == http.MethodPost {
-		// Смотрим, что именно пришло: файл? сумма для пополнения? Или и то, и другое
 		file, header, err := r.FormFile("profile_picture")
+		log.Println("ProfileHandler POST: trying to upload file")
+		if err != nil {
+			log.Println("Error retrieving file:", err)
+		}
 		if err == nil && header != nil {
-			// Значит пришёл файл
 			var buf bytes.Buffer
 			_, err := io.Copy(&buf, file)
 			if err != nil {
@@ -36,7 +36,6 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 				tmpl.ExecuteTemplate(w, "profile.html", data)
 				return
 			}
-			// Обновляем профиль в БД
 			_, err = db.DB.Exec("UPDATE users SET profile_picture = $1 WHERE username = $2", buf.Bytes(), username)
 			if err != nil {
 				log.Println("Error updating profile picture:", err)
@@ -48,7 +47,6 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Проверяем поле для суммы пополнения
 		topUpStr := r.FormValue("topup_amount")
 		if topUpStr != "" {
 			amount, err := strconv.ParseFloat(topUpStr, 64)
@@ -65,12 +63,10 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// После обработки POST перенаправим на GET, чтобы обновить данные
 		http.Redirect(w, r, "/profile", http.StatusSeeOther)
 		return
 	}
 
-	// r.Method == GET -> просто отображаем профиль
 	row := db.DB.QueryRow("SELECT id, password, balance, profile_picture FROM users WHERE username = $1", username)
 
 	var user models.User
@@ -85,11 +81,9 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Готовим Base64, если есть картинка
 	var base64Img string
 	if len(user.ProfilePicture) > 0 {
 		encoded := base64.StdEncoding.EncodeToString(user.ProfilePicture)
-		// Можно указать MIME-type, предполагая jpg
 		base64Img = "data:image/jpeg;base64," + encoded
 	}
 

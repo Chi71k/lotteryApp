@@ -2,93 +2,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Lottery Platform - Home</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8">
+  <title>Lottery Platform - Home</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 30px;
+      border: 1px solid #888;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+    }
+    .modal .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .modal .close:hover {
+      color: #000;
+    }
+    .modal form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal form label {
+      font-weight: 600;
+    }
+    .modal form input[type="text"],
+    .modal form input[type="password"],
+    .modal form input[type="number"] {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .modal form input[type="submit"] {
+      background-color: #2196f3;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s;
+    }
+    .modal form input[type="submit"]:hover {
+      background-color: #1976d2;
+    }
+  </style>
 </head>
 <body>
+  {{ template "navbar.html" . }}
 
-    {{ template "navbar.html" . }}
+  <section class="hero">
+    <h1>Welcome to the Lottery Platform</h1>
+    <p>Join our platform and discover endless opportunities to win big!</p>
+    <a class="btn" href="javascript:void(0);" onclick="openModal('registerModal')">Get Started</a>
+  </section>
 
-    <!-- Hero Section (пример) -->
-    <section class="hero">
-        <h1>Welcome to the Lottery Platform</h1>
-        <p>Join our platform and discover endless opportunities to win big!</p>
-        <a class="btn" href="javascript:void(0);" onclick="openModal('registerModal')">Get Started</a>
-    </section>
-
-    <!-- Container (пример) -->
-    <div class="container">
-        <section class="features">
-            <h2>Why Choose Us?</h2>
-            <div class="feature-cards">
-                <div class="feature-card">
-                    <h3>Fair Play</h3>
-                    <p>All draws are transparent and verifiable, ensuring fairness for every participant.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>Multiple Lotteries</h3>
-                    <p>We offer a variety of lotteries with different jackpots and odds. Pick the one that suits you best!</p>
-                </div>
-                <div class="feature-card">
-                    <h3>Instant Rewards</h3>
-                    <p>Winners are credited instantly. No long waits—just quick and easy payouts.</p>
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <!-- CTA Section -->
-    <section class="cta-section">
-        <h2>Ready to Test Your Luck?</h2>
-        <p>Sign up now and dive into the world of thrilling lotteries!</p>
-        <a class="btn" href="javascript:void(0);" onclick="openModal('registerModal')">Register Today</a>
-        <br><br>
-        <a class="btn" href="javascript:void(0);" onclick="openModal('loginModal')">Already a Member? Login</a>
-    </section>
-
-    <!-- Модалка: Регистрация -->
-    <div id="registerModal" class="modal">
-      <div class="modal-content">
-        <span class="close" onclick="closeModal('registerModal')">&times;</span>
-        <h2>Register</h2>
-
-        <!-- Место для вывода ошибок (пароль не подходит и т.п.) -->
-        <p id="registerError" class="error" style="display: none;"></p>
-
-        <!-- При сабмите вызываем JS-функцию для валидации -->
-        <form action="/home" method="POST" onsubmit="return validateRegisterForm()">
-            <label for="reg-username">Username</label>
-            <input type="text" id="reg-username" name="username" required>
-
-            <label for="reg-password">Password</label>
-            <input type="password" id="reg-password" name="password" required>
-
-            <input type="submit" value="Register">
-        </form>
+  <div class="container">
+    <section class="features">
+      <h2>Why Choose Us?</h2>
+      <div class="feature-cards">
+        <div class="feature-card">
+          <h3>Fair Play</h3>
+          <p>All draws are transparent and verifiable, ensuring fairness for every participant.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Multiple Lotteries</h3>
+          <p>We offer a variety of lotteries with different jackpots and odds. Pick the one that suits you best!</p>
+        </div>
+        <div class="feature-card">
+          <h3>Instant Rewards</h3>
+          <p>Winners are credited instantly. No long waits—just quick and easy payouts.</p>
+        </div>
       </div>
+    </section>
+  </div>
+
+  <section class="cta-section">
+    <h2>Ready to Test Your Luck?</h2>
+    <p>Sign up now and dive into the world of thrilling lotteries!</p>
+    <a class="btn" href="javascript:void(0);" onclick="openModal('registerModal')">Register Today</a>
+    <br><br>
+    <a class="btn" href="javascript:void(0);" onclick="openModal('loginModal')">Already a Member? Login</a>
+  </section>
+
+  <div id="registerModal" class="modal" {{ if .ShowRegisterModal }}style="display:block;"{{ end }}>
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('registerModal')">&times;</span>
+      <h2>Register</h2>
+      {{ if .RegisterError }}
+        <p class="error" style="color: #d9534f; font-weight: bold;">{{ .RegisterError }}</p>
+      {{ end }}
+      <form action="/register" method="POST" onsubmit="return validateRegisterForm()">
+        <label for="reg-username">Username</label>
+        <input type="text" id="reg-username" name="username" required>
+        
+        <label for="reg-password">Password</label>
+        <input type="password" id="reg-password" name="password" required>
+        
+        <input type="submit" value="Register">
+      </form>
     </div>
+  </div>
 
-    <!-- Модалка: Логин -->
-    <div id="loginModal" class="modal">
-      <div class="modal-content">
-        <span class="close" onclick="closeModal('loginModal')">&times;</span>
-        <h2>Login</h2>
-        <!-- Можно выводить ошибку логина, если нужно -->
-        <form action="/login" method="POST">
-            <label for="login-username">Username</label>
-            <input type="text" id="login-username" name="username" required>
-
-            <label for="login-password">Password</label>
-            <input type="password" id="login-password" name="password" required>
-
-            <input type="submit" value="Login">
-        </form>
-      </div>
+  <div id="loginModal" class="modal" {{ if .ShowLoginModal }}style="display:block;"{{ end }}>
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('loginModal')">&times;</span>
+      <h2>Login</h2>
+      {{ if .LoginError }}
+        <p class="error" style="color: #d9534f; font-weight: bold;">{{ .LoginError }}</p>
+      {{ end }}
+      <form action="/login" method="POST">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" name="username" required>
+        
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" name="password" required>
+        
+        <input type="submit" value="Login">
+      </form>
     </div>
+  </div>
 
-    <!-- Подключаем JS для модалок и валидации -->
-    <script src="/static/script.js"></script>
+  <script src="/static/script.js"></script>
 </body>
 </html>
 {{ end }}

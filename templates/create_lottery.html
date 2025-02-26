@@ -17,7 +17,15 @@
         <h1>Create a New Lottery</h1>
         <form method="post">
             <label for="name">Lottery Name:</label>
-            <input type="text" name="name" id="name" required>
+            <select id="name" name="name" required>
+            <option value="">-- Select a Name --</option>
+            <option value="Mega Jackpot">Mega Jackpot</option>
+            <option value="Holiday Special">Holiday Special</option>
+            <option value="Weekly Draw">Weekly Draw</option>
+            <option value="Super Saturday">Super Saturday</option>
+            <option value="Lucky Star">Lucky Star</option>
+            </select>
+
 
             <label for="description">Description:</label>
             <textarea name="description" id="description" required></textarea>

@@ -12,7 +12,6 @@ import (
 	"time"
 )
 
-// DrawsHandler handles displaying all draws
 func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("username")
 	if err != nil || cookie.Value == "" {
@@ -50,153 +49,193 @@ func DrawsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateLotteryAnalysis(lotteryID int) error {
-	// Получаем общее количество проданных билетов для лотереи
-	var totalSales int
-	err := db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1", lotteryID).Scan(&totalSales)
-	if err != nil {
-		log.Println("Error calculating total sales:", err)
-		return err
-	}
+    var totalSales int
+    err := db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1", lotteryID).Scan(&totalSales)
+    if err != nil {
+        log.Println("Error calculating total sales:", err)
+        return err
+    }
 
-	// Получаем количество оставшихся билетов
-	var remainingTickets int
-	err = db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1 AND is_winner = FALSE", lotteryID).Scan(&remainingTickets)
-	if err != nil {
-		log.Println("Error calculating remaining tickets:", err)
-		return err
-	}
+    var remainingTickets int
+    err = db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1 AND is_winner = FALSE", lotteryID).Scan(&remainingTickets)
+    if err != nil {
+        log.Println("Error calculating remaining tickets:", err)
+        return err
+    }
 
-	// Получаем количество победителей
-	var winnersCount int
-	err = db.DB.QueryRow("SELECT COUNT(*) FROM winning_tickets WHERE purchase_id IN (SELECT id FROM purchases WHERE lottery_id = $1)", lotteryID).Scan(&winnersCount)
-	if err != nil {
-		log.Println("Error calculating winners count:", err)
-		return err
-	}
+    var winnersCount int
+    err = db.DB.QueryRow(`
+        SELECT COUNT(*) 
+        FROM winning_tickets 
+        WHERE purchase_id IN (
+            SELECT id FROM purchases WHERE lottery_id = $1
+        )`, lotteryID).Scan(&winnersCount)
+    if err != nil {
+        log.Println("Error calculating winners count:", err)
+        return err
+    }
 
-	// Рассчитываем общую выручку от продаж
-	var totalRevenue float64
-	err = db.DB.QueryRow("SELECT price FROM lotteries WHERE id = $1", lotteryID).Scan(&totalRevenue)
-	if err != nil {
-		log.Println("Error calculating total revenue:", err)
-		return err
-	}
+    var totalRevenue float64
+    err = db.DB.QueryRow("SELECT price FROM lotteries WHERE id = $1", lotteryID).Scan(&totalRevenue)
+    if err != nil {
+        log.Println("Error calculating total revenue:", err)
+        return err
+    }
 
-	totalRevenue *= float64(totalSales)
+    totalRevenue *= float64(totalSales)
+    var sponsorShare, charityShare, winnerShare float64
+    if winnersCount == 0 {
+        sponsorShare = 0.75 * totalRevenue
+        charityShare = 0.25 * totalRevenue
+        winnerShare = 0
+    } else {
+        sponsorShare = 0.25 * totalRevenue
+        charityShare = 0.25 * totalRevenue
+        winnerShare = 0.50 * totalRevenue
+    }
 
-	// Рассчитываем долю спонсора и благотворительности
-	sponsorShare := 0.75 * totalRevenue
-	charityShare := 0.25 * totalRevenue
+    _, err = db.DB.Exec(`
+        INSERT INTO lottery_analysis (
+            lottery_id, 
+            total_sales, 
+            remaining_tickets, 
+            winners_count, 
+            total_revenue, 
+            sponsor_share, 
+            charity_share, 
+            winner_share
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (lottery_id) DO UPDATE SET
+            total_sales = EXCLUDED.total_sales,
+            remaining_tickets = EXCLUDED.remaining_tickets,
+            winners_count = EXCLUDED.winners_count,
+            total_revenue = EXCLUDED.total_revenue,
+            sponsor_share = EXCLUDED.sponsor_share,
+            charity_share = EXCLUDED.charity_share,
+            winner_share = EXCLUDED.winner_share
+    `,
+        lotteryID, totalSales, remainingTickets, winnersCount,
+        totalRevenue, sponsorShare, charityShare, winnerShare,
+    )
+    if err != nil {
+        log.Println("Error updating lottery analysis:", err)
+        return err
+    }
 
-	// Обновляем таблицу lottery_analysis с результатами
-	_, err = db.DB.Exec(`
-		INSERT INTO lottery_analysis (lottery_id, total_sales, remaining_tickets, winners_count, total_revenue, sponsor_share, charity_share)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT (lottery_id) 
-		DO UPDATE SET 
-			total_sales = EXCLUDED.total_sales,
-			remaining_tickets = EXCLUDED.remaining_tickets,
-			winners_count = EXCLUDED.winners_count,
-			total_revenue = EXCLUDED.total_revenue,
-			sponsor_share = EXCLUDED.sponsor_share,
-			charity_share = EXCLUDED.charity_share`,
-		lotteryID, totalSales, remainingTickets, winnersCount, totalRevenue, sponsorShare, charityShare)
-
-	if err != nil {
-		log.Println("Error updating lottery analysis:", err)
-		return err
-	}
-
-	log.Printf("Updated analysis for lottery %d", lotteryID)
-	return nil
+    log.Printf("Updated analysis for lottery %d", lotteryID)
+    return nil
 }
 
 
-// PerformDraw automatically when a lottery ends
+
 func PerformDraw(lotteryID int) {
-	// Generate 6 fixed winning numbers for testing
 	winningNumbers := generateWinningNumbers()
-	winningNumbersStr := sortNumbers(numbersToString(winningNumbers))
+    // winningNumbers := []int{1, 2, 3, 4, 5, 6}
+    winningNumbersStr := sortNumbers(numbersToString(winningNumbers))
 
-	log.Println("Performing draw for lottery:", lotteryID, "Winning Numbers:", winningNumbersStr)
+    log.Println("Performing draw for lottery:", lotteryID, "Winning Numbers:", winningNumbersStr)
 
-	// Calculate total prize amount based on ticket count
-	var totalPrizeAmount float64
-	err := db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1", lotteryID).Scan(&totalPrizeAmount)
-	if err != nil {
-		log.Println("Error calculating total ticket count:", err)
-		return
-	}
+    var totalTicketCount float64
+    err := db.DB.QueryRow("SELECT COUNT(*) FROM purchases WHERE lottery_id = $1", lotteryID).Scan(&totalTicketCount)
+    if err != nil {
+        log.Println("Error calculating total ticket count:", err)
+        return
+    }
 
-	totalPrizeAmount *= getLotteryPrice(lotteryID) // Calculate prize pool
+    ticketPrice := getLotteryPrice(lotteryID)
 
-	// Get all chosen numbers for the lottery and check for winners
-	rows, err := db.DB.Query("SELECT username, chosen_numbers FROM purchases WHERE lottery_id = $1", lotteryID)
-	if err != nil {
-		log.Println("Error fetching purchased numbers:", err)
-		return
-	}
-	defer rows.Close()
+    totalPrizeAmount := totalTicketCount * ticketPrice
 
-	var winners []string
+    rows, err := db.DB.Query("SELECT username, chosen_numbers FROM purchases WHERE lottery_id = $1", lotteryID)
+    if err != nil {
+        log.Println("Error fetching purchased numbers:", err)
+        return
+    }
+    defer rows.Close()
 
-	for rows.Next() {
-		var username string
-		var chosenNumbers string
+    var winners []string
 
-		if err := rows.Scan(&username, &chosenNumbers); err != nil {
-			log.Println("Error scanning purchased numbers:", err)
-			return
-		}
+    for rows.Next() {
+        var username string
+        var chosenNumbers string
 
-		// Check if the user's numbers match the winning ones
-		if chosenNumbers == winningNumbersStr {
-			winners = append(winners, username)
-		}
-	}
+        if err := rows.Scan(&username, &chosenNumbers); err != nil {
+            log.Println("Error scanning purchased numbers:", err)
+            return
+        }
 
-	var prizePerWinner float64
-	if len(winners) > 0 {
-		prizePerWinner = totalPrizeAmount / float64(len(winners)) // Divide prize equally
-	} else {
-		winners = append(winners, "No winner")
-		prizePerWinner = totalPrizeAmount
-	}
+        if chosenNumbers == winningNumbersStr {
+            winners = append(winners, username)
+        }
+    }
 
-	// Insert draw results into the database
-	for _, winnerUsername := range winners {
-		_, err = db.DB.Exec(`
-			INSERT INTO draws (lottery_id, draw_date, winner, winning_numbers ,prize_amount) 
-			VALUES ($1, NOW(), $2, $3, $4)`, lotteryID, winnerUsername, winningNumbersStr, prizePerWinner)
+    var prizePerWinner float64
+    if len(winners) > 0 {
+        prizePerWinner = 0.5 * totalPrizeAmount / float64(len(winners))
+    } else {
+        winners = append(winners, "No winner")
+        prizePerWinner = totalPrizeAmount
+    }
 
-		if err != nil {
-			log.Println("Error inserting draw:", err)
-			return
-		}
-	}
+    for _, username := range winners {
+        _, err = db.DB.Exec(`
+            INSERT INTO draws (lottery_id, draw_date, winner, winning_numbers, prize_amount)
+            VALUES ($1, NOW(), $2, $3, $4)`,
+            lotteryID, username, winningNumbersStr, prizePerWinner)
+        if err != nil {
+            log.Println("Error inserting draw:", err)
+            return
+        }
+    }
 
-	// Mark lottery as ended
-	_, err = db.DB.Exec("UPDATE lotteries SET status = 'ended' WHERE id = $1", lotteryID)
-	if err != nil {
-		log.Println("Error updating lottery status:", err)
-	}
+    for _, username := range winners {
+        if username == "No winner" {
+            continue
+        }
+        _, err = db.DB.Exec(`
+            INSERT INTO winning_tickets (purchase_id, winning_amount)
+            SELECT p.id, $1
+            FROM purchases p
+            WHERE p.username = $2
+              AND p.lottery_id = $3
+              AND p.chosen_numbers = $4
+        `, prizePerWinner, username, lotteryID, winningNumbersStr)
+        if err != nil {
+            log.Println("Error inserting winning ticket:", err)
+            return
+        }
+        _, err = db.DB.Exec(`
+            UPDATE users
+            SET balance = balance + $1
+            WHERE username = $2
+        `, prizePerWinner, username)
+        if err != nil {
+            log.Println("Error updating winner's balance:", err)
+            return
+        }
+    }
 
-	// Обновляем таблицу анализа лотереи
-	err = UpdateLotteryAnalysis(lotteryID)
-	if err != nil {
-		log.Println("Error updating lottery analysis:", err)
-	}
+    _, err = db.DB.Exec("UPDATE lotteries SET status = 'ended' WHERE id = $1", lotteryID)
+    if err != nil {
+        log.Println("Error updating lottery status:", err)
+    }
+
+    err = UpdateLotteryAnalysis(lotteryID)
+    if err != nil {
+        log.Println("Error updating lottery analysis:", err)
+    }
 }
 
 
-// Get lottery price
+
+
 func getLotteryPrice(lotteryID int) float64 {
 	var price float64
 	db.DB.QueryRow("SELECT price FROM lotteries WHERE id = $1", lotteryID).Scan(&price)
 	return price
 }
 
-// Helper function to generate 6 random unique numbers
 func generateWinningNumbers() []int {
 	rand.Seed(time.Now().UnixNano())
 	numbers := rand.Perm(49)[:6] // Generate numbers from 1 to 49
@@ -204,7 +243,6 @@ func generateWinningNumbers() []int {
 	return numbers
 }
 
-// Convert slice of numbers to comma-separated string
 func numbersToString(numbers []int) string {
 	var strNumbers []string
 	for _, n := range numbers {
@@ -213,7 +251,6 @@ func numbersToString(numbers []int) string {
 	return strings.Join(strNumbers, ",")
 }
 
-// Sort numbers in a comma-separated string
 func sortNumbers(numbersStr string) string {
 	numbers := strings.Split(numbersStr, ",")
 	intNumbers := make([]int, len(numbers))
@@ -236,7 +273,6 @@ func sortNumbers(numbersStr string) string {
 	return strings.Join(sortedNumbers, ",")
 }
 
-// Check and perform draw for lotteries that have ended
 func CheckForExpiredLotteries() {
 	rows, err := db.DB.Query("SELECT id FROM lotteries WHERE end_date <= NOW() AND status = 'active'")
 	if err != nil {
@@ -255,7 +291,6 @@ func CheckForExpiredLotteries() {
 	}
 }
 
-// Scheduled function to check for expired lotteries every minute
 func StartDrawScheduler() {
 	ticker := time.NewTicker(1 * time.Minute)
 	go func() {

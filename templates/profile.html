@@ -8,7 +8,6 @@
 </head>
 <body>
 
-    <!-- Navbar -->
     <nav class="navbar">
         <ul>
             <li><a href="/draws">Draws</a></li>
@@ -18,13 +17,12 @@
         </ul>
     </nav>
 
-    <!-- Шапка профиля -->
     <div class="profile-header">
         <div class="cover-photo"></div>
         <div class="profile-info">
             <div class="avatar-wrapper">
                 {{if .ImageData}}
-                    <img src="{{.ImageData}}" alt="Profile Picture" class="avatar">
+                    <img src="{{.ImageData | safeURL}}" alt="Profile Picture" class="avatar">
                 {{else}}
                     <img src="/static/default-avatar.png" alt="No profile picture" class="avatar">
                 {{end}}
@@ -34,7 +32,6 @@
                 <h1 class="username">{{.User.Username}}</h1>
                 <p class="balance">Balance: ${{printf "%.2f" .User.Balance}}</p>
 
-                <!-- Кнопка, открывающая модалку пополнения баланса -->
                 <button type="button" class="btn btn-primary" onclick="openModal('paymentModal')">
                     Top Up Balance
                 </button>
@@ -42,9 +39,7 @@
         </div>
     </div>
 
-    <!-- Основной контент -->
     <div class="container">
-        <!-- Загрузка новой фотки -->
         <section class="upload-section">
             <h2>Upload a new profile picture</h2>
             <form method="post" enctype="multipart/form-data">
@@ -60,14 +55,11 @@
         </section>
     </div>
 
-    <!-- Модалка для пополнения баланса -->
-    <!-- Если .ShowPaymentModal == true, откроем её сразу (style="display:block;") -->
     <div id="paymentModal" class="modal" {{if .ShowPaymentModal}}style="display:block;"{{end}}>
       <div class="modal-content">
         <span class="close" onclick="closeModal('paymentModal')">&times;</span>
         <h2>Choose a payment method</h2>
 
-        <!-- Если есть ошибка, покажем её красным текстом -->
         {{ if .ErrorMsg }}
           <p class="error" style="color: #d9534f; font-weight: bold;">
             {{.ErrorMsg}}
@@ -119,7 +111,6 @@
       </div>
     </div>
 
-    <!-- JS для модалок и валидации карты -->
     <script src="/static/script.js"></script>
 </body>
 </html>
